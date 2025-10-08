@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  webpack: (config) => {
+    config.cache = {
+      type: "memory",
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
