@@ -115,13 +115,13 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Quotation Details</CardTitle>
+          <CardTitle className="text-2xl">Quotation Details</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="quotationNumber">Quotation Number</Label>
               <Input
@@ -168,10 +168,10 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>From (Your Company)</CardTitle>
+            <CardTitle className="text-xl">From (Your Company)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
@@ -250,7 +250,7 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
 
         <Card>
           <CardHeader>
-            <CardTitle>To (Client)</CardTitle>
+            <CardTitle className="text-xl">To (Client)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
@@ -330,85 +330,97 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Items</span>
-            <Button type="button" onClick={addItem} size="sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-2xl">Items</CardTitle>
+            <Button type="button" onClick={addItem} size="sm" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add Item
             </Button>
-          </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-6">
             {formData.items.map((item) => (
-              <div key={item.id} className="flex gap-3 items-start border-b pb-4">
-                <div className="flex-1 grid grid-cols-5 gap-3">
-                  <div className="col-span-2">
-                    <Label htmlFor={`item-desc-${item.id}`}>Description</Label>
+              <div key={item.id} className="p-4 border rounded-lg bg-muted/30 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <div className="md:col-span-5">
+                    <Label htmlFor={`item-desc-${item.id}`} className="text-xs font-medium">Description</Label>
                     <Textarea
                       id={`item-desc-${item.id}`}
                       value={item.description}
                       onChange={(e) =>
                         updateItem(item.id, "description", e.target.value)
                       }
-                      placeholder="Item description"
-                      rows={2}
+                      placeholder="Enter item description..."
+                      rows={3}
+                      className="resize-none"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor={`item-price-${item.id}`}>Price/Unit</Label>
+                  <div className="md:col-span-2">
+                    <Label htmlFor={`item-price-${item.id}`} className="text-xs font-medium">Price per Unit (MYR)</Label>
                     <Input
                       id={`item-price-${item.id}`}
                       type="number"
                       step="0.01"
+                      min="0"
                       value={item.pricePerUnit}
                       onChange={(e) =>
                         updateItem(item.id, "pricePerUnit", parseFloat(e.target.value) || 0)
                       }
+                      placeholder="0.00"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor={`item-qty-${item.id}`}>Quantity</Label>
-                    <div className="flex gap-1">
-                      <Input
-                        id={`item-qty-${item.id}`}
-                        type="number"
-                        step="0.5"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateItem(item.id, "quantity", parseFloat(e.target.value) || 0)
-                        }
-                        className="w-20"
-                      />
-                      <Input
-                        value={item.unit}
-                        onChange={(e) => updateItem(item.id, "unit", e.target.value)}
-                        placeholder="Unit"
-                        className="w-20"
-                      />
-                    </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor={`item-qty-${item.id}`} className="text-xs font-medium">Quantity</Label>
+                    <Input
+                      id={`item-qty-${item.id}`}
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateItem(item.id, "quantity", parseFloat(e.target.value) || 0)
+                      }
+                      placeholder="0"
+                    />
                   </div>
-                  <div>
-                    <Label>Total</Label>
-                    <div className="h-10 flex items-center font-semibold">
-                      {item.total.toFixed(2)}
-                    </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor={`item-unit-${item.id}`} className="text-xs font-medium">Unit</Label>
+                    <Input
+                      id={`item-unit-${item.id}`}
+                      value={item.unit}
+                      onChange={(e) => updateItem(item.id, "unit", e.target.value)}
+                      placeholder="e.g., pcs, hours"
+                    />
+                  </div>
+                  <div className="md:col-span-1 flex items-end">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => removeItem(item.id)}
+                      className="w-full"
+                      title="Remove item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => removeItem(item.id)}
-                  className="mt-6"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex justify-end items-center pt-2 border-t">
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Item Total</p>
+                    <p className="text-lg font-bold">MYR {item.total.toFixed(2)}</p>
+                  </div>
+                </div>
               </div>
             ))}
             {formData.items.length === 0 && (
-              <div className="text-center text-muted-foreground py-8">
-                No items added. Click &ldquo;Add Item&rdquo; to get started.
+              <div className="text-center py-12 px-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                  <Plus className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-lg font-medium text-muted-foreground mb-2">No items yet</p>
+                <p className="text-sm text-muted-foreground/80">Click &ldquo;Add Item&rdquo; above to add your first item to the quotation</p>
               </div>
             )}
           </div>
@@ -417,61 +429,67 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
 
       <Card>
         <CardHeader>
-          <CardTitle>Summary</CardTitle>
+          <CardTitle className="text-2xl">Summary</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Subtotal (MYR)</Label>
-              <div className="h-10 flex items-center font-semibold">
-                {formData.subtotal.toFixed(2)}
+        <CardContent className="space-y-4">
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-semibold text-lg">MYR {formData.subtotal.toFixed(2)}</span>
+            </div>
+            <Separator />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="discount" className="text-xs font-medium">Discount (MYR)</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.discount}
+                  onChange={(e) => updateSummary("discount", parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label htmlFor="tax" className="text-xs font-medium">Tax (MYR)</Label>
+                <Input
+                  id="tax"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.tax}
+                  onChange={(e) => updateSummary("tax", parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="shipping" className="text-xs font-medium">Shipping (MYR)</Label>
+                <Input
+                  id="shipping"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.shipping}
+                  onChange={(e) => updateSummary("shipping", parseFloat(e.target.value) || 0)}
+                  placeholder="0.00"
+                />
               </div>
             </div>
-            <div></div>
-            <div>
-              <Label htmlFor="discount">Discount (MYR)</Label>
-              <Input
-                id="discount"
-                type="number"
-                step="0.01"
-                value={formData.discount}
-                onChange={(e) => updateSummary("discount", parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="tax">Tax (MYR)</Label>
-              <Input
-                id="tax"
-                type="number"
-                step="0.01"
-                value={formData.tax}
-                onChange={(e) => updateSummary("tax", parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="shipping">Shipping (MYR)</Label>
-              <Input
-                id="shipping"
-                type="number"
-                step="0.01"
-                value={formData.shipping}
-                onChange={(e) => updateSummary("shipping", parseFloat(e.target.value) || 0)}
-              />
-            </div>
           </div>
-          <Separator />
-          <div className="flex justify-between items-center text-lg font-bold">
-            <span>Total Amount (MYR):</span>
-            <span>{formData.total.toFixed(2)}</span>
+          <Separator className="my-4" />
+          <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
+            <span className="text-xl font-bold">Total Amount</span>
+            <span className="text-2xl font-bold text-primary">MYR {formData.total.toFixed(2)}</span>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Bank Information</CardTitle>
+          <CardTitle className="text-2xl">Bank Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div>
             <Label htmlFor="bankName">Bank Name</Label>
             <Input
@@ -514,8 +532,8 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button type="submit" size="lg">
+      <div className="flex justify-end pt-4">
+        <Button type="submit" size="lg" className="w-full sm:w-auto min-w-[240px]">
           Generate Quotation Preview
         </Button>
       </div>

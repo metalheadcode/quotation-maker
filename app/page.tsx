@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import QuotationForm from "@/components/quotation-form";
+import QuotationFormV2 from "@/components/quotation-form-v2";
 import QuotationPreview from "@/components/quotation-preview";
 import { QuotationData } from "@/lib/types/quotation";
 
@@ -33,7 +33,7 @@ export default function Home() {
         )}
 
         {!showPreview ? (
-          <QuotationForm onSubmit={handleFormSubmit} initialData={quotationData || undefined} />
+          <QuotationFormV2 onSubmit={handleFormSubmit} initialData={quotationData || undefined} />
         ) : (
           quotationData && <QuotationPreview data={quotationData} onEdit={handleEdit} />
         )}
