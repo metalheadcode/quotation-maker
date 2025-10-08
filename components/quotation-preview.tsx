@@ -39,8 +39,12 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
 
       <div className="quotation-preview bg-white text-black p-8 max-w-[210mm] mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-[#4a90e2]">
-          <h1 className="text-4xl font-bold text-[#4a90e2]">QUOTATION</h1>
+        <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-black">
+          <img
+            src="/images/default-logo.png"
+            alt="Company Logo"
+            className="h-16 object-contain"
+          />
           <div className="text-right text-sm">
             <div className="text-lg font-bold bg-gray-100 px-4 py-2 rounded mb-2">
               {data.quotationNumber}
@@ -53,7 +57,7 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
         {/* Company Details */}
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
-            <div className="font-bold text-sm text-[#4a90e2] mb-2 border-b border-gray-300 pb-1">
+            <div className="font-bold text-sm text-black mb-2 border-b border-gray-300 pb-1">
               FROM
             </div>
             <div className="font-bold text-sm mb-1">{data.from.name}</div>
@@ -63,14 +67,14 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
               </div>
             )}
             <div className="text-sm mb-2 whitespace-pre-line">{data.from.address}</div>
-            <div className="text-sm text-[#4a90e2]">
+            <div className="text-sm text-black">
               <div>📧 {data.from.email}</div>
               <div>📱 {data.from.phone}</div>
             </div>
           </div>
 
           <div>
-            <div className="font-bold text-sm text-[#4a90e2] mb-2 border-b border-gray-300 pb-1">
+            <div className="font-bold text-sm text-black mb-2 border-b border-gray-300 pb-1">
               TO
             </div>
             <div className="font-bold text-sm mb-1">{data.to.name}</div>
@@ -80,7 +84,7 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
               </div>
             )}
             <div className="text-sm mb-2 whitespace-pre-line">{data.to.address}</div>
-            <div className="text-sm text-[#4a90e2]">
+            <div className="text-sm text-black">
               <div>📧 {data.to.email}</div>
               <div>📞 {data.to.phone}</div>
             </div>
@@ -89,7 +93,7 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
 
         {/* Project Title */}
         {data.projectTitle && (
-          <div className="text-center bg-gray-50 p-3 mb-6 border-l-4 border-[#4a90e2] font-bold">
+          <div className="text-center bg-gray-50 p-3 mb-6 border-l-4 border-black font-bold">
             {data.projectTitle}
           </div>
         )}
@@ -97,7 +101,7 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
         {/* Services Table */}
         <table className="w-full mb-6 text-sm border-collapse">
           <thead>
-            <tr className="bg-[#4a90e2] text-white">
+            <tr className="bg-black text-white">
               <th className="p-2 text-left w-[5%]">#</th>
               <th className="p-2 text-left w-[55%]">Item/Description</th>
               <th className="p-2 text-left w-[12%]">Price/Unit</th>
@@ -134,7 +138,7 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
         {/* Summary Section */}
         <div className="grid grid-cols-[60%_40%] gap-6 mt-6">
           <div className="text-sm">
-            <div className="font-bold text-[#4a90e2] mb-2">Terms & Conditions</div>
+            <div className="font-bold text-black mb-2">Terms & Conditions</div>
             <ul className="space-y-1">
               {data.terms.map((term, index) => (
                 <li key={index}>{index + 1}. {term}</li>
@@ -143,7 +147,7 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
 
             {data.notes.length > 0 && (
               <>
-                <div className="font-bold text-[#4a90e2] mt-4 mb-2">Notes</div>
+                <div className="font-bold text-black mt-4 mb-2">Notes</div>
                 <ul className="space-y-1">
                   {data.notes.map((note, index) => (
                     <li key={index}>• {note}</li>
@@ -206,7 +210,7 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
                     </td>
                   </tr>
                 )}
-                <tr className="bg-[#4a90e2] text-white font-bold">
+                <tr className="bg-black text-white font-bold">
                   <td className="p-2">Total Amount (MYR):</td>
                   <td className="p-2 text-right">{data.total.toFixed(2)}</td>
                 </tr>

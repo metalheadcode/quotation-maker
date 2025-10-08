@@ -15,6 +15,14 @@ export interface CompanyInfo {
   phone: string;
 }
 
+export interface CompanyInfoDB extends CompanyInfo {
+  id: number;
+  userId: string;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface QuotationData {
   quotationNumber: string;
   date: string;

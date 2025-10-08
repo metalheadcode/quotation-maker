@@ -1,4 +1,5 @@
 import { sql } from '../db';
+import { CompanyInfoDB } from '../types/quotation';
 
 // Types
 export interface User {
@@ -49,6 +50,7 @@ export interface Quotation {
 
 export type NewClient = Omit<Client, 'id' | 'created_at' | 'updated_at'>;
 export type NewQuotation = Omit<Quotation, 'id' | 'created_at' | 'updated_at'>;
+export type NewCompanyInfo = Omit<CompanyInfoDB, 'id' | 'createdAt' | 'updatedAt'>;
 
 // User Queries
 export async function getUserById(id: string): Promise<User | null> {
@@ -251,4 +253,164 @@ export async function generateQuotationNumber(): Promise<string> {
   }
 
   return `QT-${year}-0001`;
+}
+
+
+// Company Info Queries
+export async function getCompanyInfos(userId: string): Promise<CompanyInfoDB[]> {
+  const result = await sql`
+    SELECT 
+      id, 
+      user_id as "userId",
+      name,
+      registration_number as "registrationNumber",
+      address,
+      email,
+      phone,
+      is_default as "isDefault",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    FROM company_info
+    WHERE user_id = ${userId}
+    ORDER BY is_default DESC, created_at DESC
+  `;
+  return result as CompanyInfoDB[];
+}
+
+export async function getCompanyInfoById(id: number, userId: string): Promise<CompanyInfoDB | null> {
+  const result = await sql`
+    SELECT 
+      id, 
+      user_id as "userId",
+      name,
+      registration_number as "registrationNumber",
+      address,
+      email,
+      phone,
+      is_default as "isDefault",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    FROM company_info
+    WHERE id = ${id} AND user_id = ${userId}
+  `;
+  return result[0] as CompanyInfoDB || null;
+}
+
+export async function getDefaultCompanyInfo(userId: string): Promise<CompanyInfoDB | null> {
+  const result = await sql`
+    SELECT 
+      id, 
+      user_id as "userId",
+      name,
+      registration_number as "registrationNumber",
+      address,
+      email,
+      phone,
+      is_default as "isDefault",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+    FROM company_info
+    WHERE user_id = ${userId} AND is_default = true
+    LIMIT 1
+  `;
+  return result[0] as CompanyInfoDB || null;
+}
+
+export async function createCompanyInfo(companyInfo: NewCompanyInfo): Promise<CompanyInfoDB> {
+  // If this is being set as default, unset any existing default
+  if (companyInfo.isDefault) {
+    await sql`
+      UPDATE company_info
+      SET is_default = false
+      WHERE user_id = ${companyInfo.userId}
+    `;
+  }
+
+  const result = await sql`
+    INSERT INTO company_info (
+      user_id, name, registration_number, address, email, phone, is_default
+    )
+    VALUES (
+      ${companyInfo.userId},
+      ${companyInfo.name},
+      ${companyInfo.registrationNumber || null},
+      ${companyInfo.address},
+      ${companyInfo.email},
+      ${companyInfo.phone},
+      ${companyInfo.isDefault || false}
+    )
+    RETURNING 
+      id, 
+      user_id as "userId",
+      name,
+      registration_number as "registrationNumber",
+      address,
+      email,
+      phone,
+      is_default as "isDefault",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return result[0] as CompanyInfoDB;
+}
+
+export async function updateCompanyInfo(
+  id: number, 
+  userId: string,
+  companyInfo: Partial<NewCompanyInfo>
+): Promise<CompanyInfoDB | null> {
+  // Get current company info
+  const current = await getCompanyInfoById(id, userId);
+  if (!current) return null;
+
+  // If this is being set as default, unset any existing default
+  if (companyInfo.isDefault) {
+    await sql`
+      UPDATE company_info
+      SET is_default = false
+      WHERE user_id = ${userId} AND id != ${id}
+    `;
+  }
+
+  // Merge with updates
+  const updated = {
+    name: companyInfo.name ?? current.name,
+    registrationNumber: companyInfo.registrationNumber ?? current.registrationNumber,
+    address: companyInfo.address ?? current.address,
+    email: companyInfo.email ?? current.email,
+    phone: companyInfo.phone ?? current.phone,
+    isDefault: companyInfo.isDefault ?? current.isDefault,
+  };
+
+  const result = await sql`
+    UPDATE company_info
+    SET
+      name = ${updated.name},
+      registration_number = ${updated.registrationNumber},
+      address = ${updated.address},
+      email = ${updated.email},
+      phone = ${updated.phone},
+      is_default = ${updated.isDefault},
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id} AND user_id = ${userId}
+    RETURNING 
+      id, 
+      user_id as "userId",
+      name,
+      registration_number as "registrationNumber",
+      address,
+      email,
+      phone,
+      is_default as "isDefault",
+      created_at as "createdAt",
+      updated_at as "updatedAt"
+  `;
+  return result[0] as CompanyInfoDB || null;
+}
+
+export async function deleteCompanyInfo(id: number, userId: string): Promise<void> {
+  await sql`
+    DELETE FROM company_info
+    WHERE id = ${id} AND user_id = ${userId}
+  `;
 }

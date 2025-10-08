@@ -119,3 +119,71 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print Styles */
+@media print {
+  /* Hide elements with no-print class */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Force background colors to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Ensure quotation preview uses proper colors */
+  .quotation-preview {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Force table header to be black */
+  .quotation-preview table thead tr {
+    background-color: black !important;
+    color: white !important;
+  }
+
+  .quotation-preview table thead th {
+    color: white !important;
+  }
+
+  /* Ensure all text in quotation is black */
+  .quotation-preview * {
+    color: black !important;
+  }
+
+  /* Except for specific white text elements */
+  .quotation-preview table thead * {
+    color: white !important;
+  }
+
+  /* Ensure borders are black */
+  .quotation-preview .border-black {
+    border-color: black !important;
+  }
+
+  /* Remove shadows */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Set page margins */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+
+  /* Prevent page breaks inside important elements */
+  .quotation-preview table,
+  .quotation-preview .grid {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure proper sizing */
+  body {
+    background: white !important;
+  }
+}
