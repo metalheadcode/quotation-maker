@@ -1,6 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) quotation-maker application with Neon PostgreSQL database.
 
 ## Getting Started
+
+### 1. Database Setup
+
+1. Create a free account at [Neon](https://neon.tech)
+2. Create a new project
+3. Copy the connection string from Dashboard → Connection Details
+4. Add it to `.env.local`:
+   ```bash
+   DATABASE_URL=your_neon_connection_string_here
+   ```
+
+### 2. Run Database Migrations
+
+Connect to your Neon database and run the migration:
+
+```bash
+# You can use Neon's SQL Editor in the dashboard, or psql:
+psql your_neon_connection_string < migrations/001_initial.sql
+```
+
+### 3. Start Development Server
 
 First, run the development server:
 
@@ -19,6 +40,29 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Database Usage
+
+The project uses raw SQL with type-safe query helpers. Examples:
+
+```typescript
+import { getClients, createClient, getQuotations } from '@/lib/db/queries';
+
+// Get all clients
+const clients = await getClients();
+
+// Create a new client
+const client = await createClient({
+  name: 'John Doe',
+  email: 'john@example.com',
+  company: 'Acme Inc'
+});
+
+// Get all quotations
+const quotations = await getQuotations();
+```
+
+See `lib/db/queries.ts` for all available functions.
 
 ## Learn More
 

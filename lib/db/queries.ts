@@ -1,0 +1,254 @@
+import { sql } from '../db';
+
+// Types
+export interface User {
+  id: string;
+  primary_email: string;
+  primary_email_verified: boolean;
+  display_name?: string;
+  profile_image_url?: string;
+  signed_up_at: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Client {
+  id: number;
+  user_id?: string;
+  name: string;
+  email?: string;
+  company?: string;
+  phone?: string;
+  address?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface QuotationItem {
+  description: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
+export interface Quotation {
+  id: number;
+  user_id?: string;
+  client_id: number;
+  quotation_number: string;
+  date: Date;
+  items: QuotationItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: string;
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type NewClient = Omit<Client, 'id' | 'created_at' | 'updated_at'>;
+export type NewQuotation = Omit<Quotation, 'id' | 'created_at' | 'updated_at'>;
+
+// User Queries
+export async function getUserById(id: string): Promise<User | null> {
+  const result = await sql`
+    SELECT * FROM neon_auth.users_sync
+    WHERE id = ${id}
+  `;
+  return result[0] as User || null;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const result = await sql`
+    SELECT * FROM neon_auth.users_sync
+    WHERE primary_email = ${email}
+  `;
+  return result[0] as User || null;
+}
+
+// Client Queries
+export async function getClients(userId?: string): Promise<Client[]> {
+  if (userId) {
+    const result = await sql`
+      SELECT * FROM clients
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `;
+    return result as Client[];
+  }
+
+  const result = await sql`
+    SELECT * FROM clients
+    ORDER BY created_at DESC
+  `;
+  return result as Client[];
+}
+
+export async function getClientById(id: number): Promise<Client | null> {
+  const result = await sql`
+    SELECT * FROM clients
+    WHERE id = ${id}
+  `;
+  return result[0] as Client || null;
+}
+
+export async function createClient(client: NewClient): Promise<Client> {
+  const result = await sql`
+    INSERT INTO clients (user_id, name, email, company, phone, address)
+    VALUES (${client.user_id || null}, ${client.name}, ${client.email || null}, ${client.company || null}, ${client.phone || null}, ${client.address || null})
+    RETURNING *
+  `;
+  return result[0] as Client;
+}
+
+export async function updateClient(id: number, client: Partial<NewClient>): Promise<Client | null> {
+  const result = await sql`
+    UPDATE clients
+    SET
+      name = COALESCE(${client.name || null}, name),
+      email = COALESCE(${client.email || null}, email),
+      company = COALESCE(${client.company || null}, company),
+      phone = COALESCE(${client.phone || null}, phone),
+      address = COALESCE(${client.address || null}, address),
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return result[0] as Client || null;
+}
+
+export async function deleteClient(id: number): Promise<void> {
+  await sql`
+    DELETE FROM clients
+    WHERE id = ${id}
+  `;
+}
+
+// Quotation Queries
+export async function getQuotations(userId?: string): Promise<Quotation[]> {
+  if (userId) {
+    const result = await sql`
+      SELECT * FROM quotations
+      WHERE user_id = ${userId}
+      ORDER BY date DESC
+    `;
+    return result as Quotation[];
+  }
+
+  const result = await sql`
+    SELECT * FROM quotations
+    ORDER BY date DESC
+  `;
+  return result as Quotation[];
+}
+
+export async function getQuotationById(id: number): Promise<Quotation | null> {
+  const result = await sql`
+    SELECT * FROM quotations
+    WHERE id = ${id}
+  `;
+  return result[0] as Quotation || null;
+}
+
+export async function getQuotationsByClientId(clientId: number): Promise<Quotation[]> {
+  const result = await sql`
+    SELECT * FROM quotations
+    WHERE client_id = ${clientId}
+    ORDER BY date DESC
+  `;
+  return result as Quotation[];
+}
+
+export async function createQuotation(quotation: NewQuotation): Promise<Quotation> {
+  const result = await sql`
+    INSERT INTO quotations (
+      user_id, client_id, quotation_number, date, items,
+      subtotal, tax, total, status, notes
+    )
+    VALUES (
+      ${quotation.user_id || null},
+      ${quotation.client_id},
+      ${quotation.quotation_number},
+      ${quotation.date},
+      ${JSON.stringify(quotation.items)},
+      ${quotation.subtotal},
+      ${quotation.tax},
+      ${quotation.total},
+      ${quotation.status},
+      ${quotation.notes || null}
+    )
+    RETURNING *
+  `;
+  return result[0] as Quotation;
+}
+
+export async function updateQuotation(id: number, quotation: Partial<NewQuotation>): Promise<Quotation | null> {
+  // Get current quotation
+  const current = await getQuotationById(id);
+  if (!current) return null;
+
+  // Merge with updates
+  const updated = {
+    client_id: quotation.client_id ?? current.client_id,
+    quotation_number: quotation.quotation_number ?? current.quotation_number,
+    date: quotation.date ?? current.date,
+    items: quotation.items ?? current.items,
+    subtotal: quotation.subtotal ?? current.subtotal,
+    tax: quotation.tax ?? current.tax,
+    total: quotation.total ?? current.total,
+    status: quotation.status ?? current.status,
+    notes: quotation.notes ?? current.notes,
+  };
+
+  const result = await sql`
+    UPDATE quotations
+    SET
+      client_id = ${updated.client_id},
+      quotation_number = ${updated.quotation_number},
+      date = ${updated.date},
+      items = ${JSON.stringify(updated.items)},
+      subtotal = ${updated.subtotal},
+      tax = ${updated.tax},
+      total = ${updated.total},
+      status = ${updated.status},
+      notes = ${updated.notes},
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return result[0] as Quotation || null;
+}
+
+export async function deleteQuotation(id: number): Promise<void> {
+  await sql`
+    DELETE FROM quotations
+    WHERE id = ${id}
+  `;
+}
+
+// Generate unique quotation number
+export async function generateQuotationNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  const result = await sql`
+    SELECT quotation_number
+    FROM quotations
+    WHERE quotation_number LIKE ${`QT-${year}-%`}
+    ORDER BY quotation_number DESC
+    LIMIT 1
+  `;
+
+  if (result.length === 0) {
+    return `QT-${year}-0001`;
+  }
+
+  const lastNumber = result[0].quotation_number;
+  const match = lastNumber.match(/QT-\d{4}-(\d+)/);
+
+  if (match) {
+    const nextNumber = parseInt(match[1], 10) + 1;
+    return `QT-${year}-${String(nextNumber).padStart(4, '0')}`;
+  }
+
+  return `QT-${year}-0001`;
+}
