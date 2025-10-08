@@ -223,16 +223,26 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
         </div>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          body {
+            background: white !important;
+          }
+
           .no-print {
             display: none !important;
           }
 
           .quotation-preview {
-            max-width: none;
-            padding: 0;
-            margin: 0;
+            max-width: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
           }
 
           @page {
@@ -240,9 +250,33 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
             margin: 15mm;
           }
 
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+          /* Ensure backgrounds and colors print */
+          .bg-gray-50,
+          .bg-gray-100 {
+            background-color: #f9fafb !important;
+          }
+
+          .bg-\\[\\#4a90e2\\] {
+            background-color: #4a90e2 !important;
+            color: white !important;
+          }
+
+          .text-\\[\\#4a90e2\\] {
+            color: #4a90e2 !important;
+          }
+
+          .border-\\[\\#4a90e2\\] {
+            border-color: #4a90e2 !important;
+          }
+
+          /* Ensure table backgrounds print */
+          table tr:nth-child(even) {
+            background-color: #f9fafb !important;
+          }
+
+          table thead tr {
+            background-color: #4a90e2 !important;
+            color: white !important;
           }
         }
       `}</style>
