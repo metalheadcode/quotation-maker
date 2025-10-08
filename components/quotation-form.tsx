@@ -340,7 +340,7 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {formData.items.map((item, index) => (
+            {formData.items.map((item) => (
               <div key={item.id} className="flex gap-3 items-start border-b pb-4">
                 <div className="flex-1 grid grid-cols-5 gap-3">
                   <div className="col-span-2">
@@ -408,7 +408,7 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
             ))}
             {formData.items.length === 0 && (
               <div className="text-center text-muted-foreground py-8">
-                No items added. Click "Add Item" to get started.
+                No items added. Click &ldquo;Add Item&rdquo; to get started.
               </div>
             )}
           </div>
