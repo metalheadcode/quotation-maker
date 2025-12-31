@@ -1,10 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import {
-  getCompanyInfoById,
-  updateCompanyInfo,
-  deleteCompanyInfo
-} from '@/lib/db/queries';
-import { stackServerApp } from '@/stack';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/company-info/[id] - Get a specific company info
 export async function GET(
@@ -12,39 +7,39 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await stackServerApp.getUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const companyInfoId = parseInt(id, 10);
 
-    if (isNaN(companyInfoId)) {
-      return NextResponse.json(
-        { error: 'Invalid company info ID' },
-        { status: 400 }
-      );
-    }
+    const { data: companyInfo, error } = await supabase
+      .from("company_info")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
 
-    const companyInfo = await getCompanyInfoById(companyInfoId, user.id);
-
-    if (!companyInfo) {
-      return NextResponse.json(
-        { error: 'Company info not found' },
-        { status: 404 }
-      );
+    if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { error: "Company info not found" },
+          { status: 404 }
+        );
+      }
+      throw error;
     }
 
     return NextResponse.json(companyInfo);
   } catch (error) {
-    console.error('Error fetching company info:', error);
+    console.error("Error fetching company info:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch company info' },
+      { error: "Failed to fetch company info" },
       { status: 500 }
     );
   }
@@ -56,50 +51,50 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await stackServerApp.getUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const companyInfoId = parseInt(id, 10);
-
-    if (isNaN(companyInfoId)) {
-      return NextResponse.json(
-        { error: 'Invalid company info ID' },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
-    const { name, registrationNumber, address, email, phone, isDefault } = body;
+    const { name, registration_number, address, email, phone, is_default } =
+      body;
 
-    const updatedCompanyInfo = await updateCompanyInfo(companyInfoId, user.id, {
-      userId: user.id,
-      name,
-      registrationNumber,
-      address,
-      email,
-      phone,
-      isDefault,
-    });
+    const { data: updatedCompanyInfo, error } = await supabase
+      .from("company_info")
+      .update({
+        name,
+        registration_number,
+        address,
+        email,
+        phone,
+        is_default,
+      })
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select()
+      .single();
 
-    if (!updatedCompanyInfo) {
-      return NextResponse.json(
-        { error: 'Company info not found' },
-        { status: 404 }
-      );
+    if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { error: "Company info not found" },
+          { status: 404 }
+        );
+      }
+      throw error;
     }
 
     return NextResponse.json(updatedCompanyInfo);
   } catch (error) {
-    console.error('Error updating company info:', error);
+    console.error("Error updating company info:", error);
     return NextResponse.json(
-      { error: 'Failed to update company info' },
+      { error: "Failed to update company info" },
       { status: 500 }
     );
   }
@@ -111,35 +106,33 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await stackServerApp.getUser();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    const companyInfoId = parseInt(id, 10);
 
-    if (isNaN(companyInfoId)) {
-      return NextResponse.json(
-        { error: 'Invalid company info ID' },
-        { status: 400 }
-      );
-    }
+    const { error } = await supabase
+      .from("company_info")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
 
-    await deleteCompanyInfo(companyInfoId, user.id);
+    if (error) throw error;
 
     return NextResponse.json(
-      { message: 'Company info deleted successfully' },
+      { message: "Company info deleted successfully" },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error deleting company info:', error);
+    console.error("Error deleting company info:", error);
     return NextResponse.json(
-      { error: 'Failed to delete company info' },
+      { error: "Failed to delete company info" },
       { status: 500 }
     );
   }

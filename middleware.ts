@@ -1,27 +1,8 @@
-import { stackServerApp } from "./stack/server";
-import { NextRequest, NextResponse } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
+import { type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const user = await stackServerApp.getUser();
-
-  // Public routes that don't require authentication
-  const publicPaths = ["/login", "/handler"];
-  const isPublicPath = publicPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  // If user is not logged in and trying to access protected route
-  if (!user && !isPublicPath) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // If user is logged in and trying to access login page, redirect to home
-  if (user && request.nextUrl.pathname === "/login") {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  return NextResponse.next();
+  return await updateSession(request);
 }
 
 export const config = {

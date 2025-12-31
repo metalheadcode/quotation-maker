@@ -262,7 +262,7 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
       <div className="grid gap-4">
         {companyInfos.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No company information saved. Click "Add Company Info" to get
+            No company information saved. Click &quot;Add Company Info&quot; to get
             started.
           </div>
         ) : (
