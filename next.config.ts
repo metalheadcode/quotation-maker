@@ -10,12 +10,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config) => {
-    config.cache = {
-      type: "memory",
-    };
-    return config;
-  },
+  // Empty turbopack config to use Turbopack (Next.js 16 default)
+  turbopack: {},
 };
 
 export default nextConfig;
