@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { deleteFile, extractPathFromUrl } from "@/lib/supabase/storage";
 
 // GET /api/company-info/[id] - Get a specific company info
 export async function GET(
@@ -62,7 +63,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, registration_number, address, email, phone, is_default } =
+    const { name, registration_number, address, email, phone, is_default, logo_url } =
       body;
 
     const { data: updatedCompanyInfo, error } = await supabase
@@ -74,6 +75,7 @@ export async function PUT(
         email,
         phone,
         is_default,
+        logo_url,
       })
       .eq("id", id)
       .eq("user_id", user.id)
@@ -117,6 +119,23 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // First, get the company info to check if it has a logo
+    const { data: companyInfo } = await supabase
+      .from("company_info")
+      .select("logo_url")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    // Delete logo from storage if exists
+    if (companyInfo?.logo_url) {
+      const logoPath = extractPathFromUrl(companyInfo.logo_url, "company-logos");
+      if (logoPath) {
+        await deleteFile("company-logos", logoPath);
+      }
+    }
+
+    // Delete the company info record
     const { error } = await supabase
       .from("company_info")
       .delete()

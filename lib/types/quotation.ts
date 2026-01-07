@@ -13,12 +13,14 @@ export interface CompanyInfo {
   address: string;
   email: string;
   phone: string;
+  logoUrl?: string;
 }
 
 export interface CompanyInfoDB extends CompanyInfo {
   id: number;
   userId: string;
   isDefault: boolean;
+  logoUrl: string;
   createdAt: Date;
   updatedAt: Date;
 }

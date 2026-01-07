@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -10,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { QuotationData, CompanyInfo } from "@/lib/types/quotation";
 import { quotationDataSchema, QuotationFormData } from "@/lib/schemas/quotation";
-import { Plus, Trash2, Save, Building2 } from "lucide-react";
+import { Plus, Trash2, Save, Building2, Landmark, ExternalLink, Mail, Phone } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -20,9 +22,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { ClientCombobox } from "@/components/client-combobox";
+import { CompanyCombobox } from "@/components/company-combobox";
+import { BankAccountCombobox } from "@/components/bank-account-combobox";
+import { DraftSelector } from "@/components/draft-selector";
+import { SaveStatusIndicator } from "@/components/save-status-indicator";
+import { FloatingSaveButton } from "@/components/floating-save-button";
 import { useCompanyStore } from "@/stores/useCompanyStore";
 import { useClientStore } from "@/stores/useClientStore";
-import { useQuotationStore } from "@/stores/useQuotationStore";
+import { useQuotationStore, QuotationDataWithIds } from "@/stores/useQuotationStore";
+import { useBankInfoStore } from "@/stores/useBankInfoStore";
+import { useAutoSave } from "@/hooks/useAutoSave";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface QuotationFormProps {
   onSubmit: (data: QuotationData) => void;
@@ -37,16 +47,53 @@ interface QuotationFormProps {
 }
 
 export default function QuotationFormV2({ onSubmit, initialData }: QuotationFormProps) {
-  const company = useCompanyStore((state) => state.company);
-  const hasCompany = useCompanyStore((state) => state.hasCompany);
-  const setCompany = useCompanyStore((state) => state.setCompany);
+  const selectedCompany = useCompanyStore((state) => state.selectedCompany);
+  const companies = useCompanyStore((state) => state.companies);
+  const fetchCompanies = useCompanyStore((state) => state.fetchCompanies);
+  const selectCompany = useCompanyStore((state) => state.selectCompany);
 
   const addClient = useClientStore((state) => state.addClient);
+  const fetchClients = useClientStore((state) => state.fetchClients);
+
   const getNextQuotationNumber = useQuotationStore((state) => state.getNextQuotationNumber);
   const incrementQuotationNumber = useQuotationStore((state) => state.incrementQuotationNumber);
+  const fetchDrafts = useQuotationStore((state) => state.fetchDrafts);
+  const currentDraftId = useQuotationStore((state) => state.currentDraftId);
+  const clearCurrentDraft = useQuotationStore((state) => state.clearCurrentDraft);
+
+  const bankAccounts = useBankInfoStore((state) => state.bankAccounts);
+  const fetchBankAccounts = useBankInfoStore((state) => state.fetchBankAccounts);
+  const addBankAccount = useBankInfoStore((state) => state.addBankAccount);
 
   const [selectedClientId, setSelectedClientId] = useState<string>();
-  const [showCompanySetup, setShowCompanySetup] = useState(!hasCompany());
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>();
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>();
+  const [showBankSetup, setShowBankSetup] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [initialDataHash, setInitialDataHash] = useState<string>("");
+  const [lastSavedDataHash, setLastSavedDataHash] = useState<string>("");
+
+  // Fetch data on mount
+  useEffect(() => {
+    const initializeData = async () => {
+      await Promise.all([
+        fetchCompanies(),
+        fetchClients(),
+        fetchDrafts(),
+        fetchBankAccounts(),
+      ]);
+      setIsInitialized(true);
+    };
+    initializeData();
+  }, [fetchCompanies, fetchClients, fetchDrafts, fetchBankAccounts]);
+
+  // Set selected company ID when company is loaded
+  useEffect(() => {
+    if (selectedCompany?.id && !selectedCompanyId) {
+      setSelectedCompanyId(selectedCompany.id);
+    }
+  }, [selectedCompany, selectedCompanyId]);
 
   const form = useForm<QuotationFormData>({
     resolver: zodResolver(quotationDataSchema),
@@ -54,7 +101,7 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
       quotationNumber: getNextQuotationNumber(),
       date: new Date().toISOString().split("T")[0],
       validUntil: "",
-      from: company || {
+      from: selectedCompany || {
         name: "",
         registrationNumber: "",
         address: "",
@@ -96,11 +143,212 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
     name: "items",
   });
 
+  // Auto-select default bank account when loaded (for new quotations)
+  useEffect(() => {
+    if (isInitialized && bankAccounts.length > 0 && !selectedBankAccountId && !initialData) {
+      const defaultAccount = bankAccounts.find((b) => b.isDefault) || bankAccounts[0];
+      if (defaultAccount) {
+        setSelectedBankAccountId(defaultAccount.id);
+        // Also populate the form fields
+        form.setValue("bankInfo.bankName", defaultAccount.bankName);
+        form.setValue("bankInfo.accountNumber", defaultAccount.accountNumber);
+        form.setValue("bankInfo.accountName", defaultAccount.accountName);
+      }
+    }
+  }, [isInitialized, bankAccounts, selectedBankAccountId, initialData, form]);
+
+  // Watch entire form for auto-save
+  const watchedFormData = form.watch();
+
+  // Memoize form data for auto-save to prevent unnecessary re-renders
+  const formDataForAutoSave = useMemo(() => {
+    // Only enable auto-save after initialization
+    if (!isInitialized) return null;
+
+    const data = watchedFormData;
+    return {
+      quotationNumber: data.quotationNumber,
+      date: data.date,
+      validUntil: data.validUntil,
+      projectTitle: data.projectTitle,
+      from: {
+        name: data.from.name,
+        registrationNumber: data.from.registrationNumber || "",
+        address: data.from.address,
+        email: data.from.email,
+        phone: data.from.phone,
+      },
+      to: {
+        name: data.to.name,
+        registrationNumber: data.to.registrationNumber || "",
+        address: data.to.address,
+        email: data.to.email,
+        phone: data.to.phone,
+      },
+      items: data.items,
+      subtotal: data.subtotal,
+      discount: data.discount,
+      tax: data.tax,
+      shipping: data.shipping,
+      total: data.total,
+      terms: data.terms,
+      notes: data.notes,
+      bankInfo: {
+        bankName: data.bankInfo?.bankName || "",
+        accountNumber: data.bankInfo?.accountNumber || "",
+        accountName: data.bankInfo?.accountName || "",
+      },
+      clientId: selectedClientId,
+      companyInfoId: selectedCompanyId,
+      bankInfoId: selectedBankAccountId,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(watchedFormData), isInitialized, selectedClientId, selectedCompanyId, selectedBankAccountId]);
+
+  // Auto-save hook
+  const { saveStatus, lastSavedAt, triggerSave } = useAutoSave(formDataForAutoSave, {
+    delay: 2000,
+    enabled: isInitialized,
+    onSaveSuccess: () => {
+      // Mark as saved - update hash to track future changes
+      if (formDataForAutoSave) {
+        setLastSavedDataHash(JSON.stringify(formDataForAutoSave));
+        setHasUnsavedChanges(false);
+      }
+    },
+    onSaveError: () => {
+      toast.error("Failed to save draft");
+    },
+  });
+
+  // Set initial hash when form first initializes (for new quotations)
+  useEffect(() => {
+    if (!isInitialized || !formDataForAutoSave || initialDataHash) return;
+    // Set the initial hash on first render after initialization
+    setInitialDataHash(JSON.stringify(formDataForAutoSave));
+  }, [isInitialized, formDataForAutoSave, initialDataHash]);
+
+  // Track unsaved changes by comparing current data to initial or last saved state
+  useEffect(() => {
+    if (!isInitialized || !formDataForAutoSave || !initialDataHash) return;
+
+    const currentHash = JSON.stringify(formDataForAutoSave);
+    // Compare to last saved hash if available, otherwise to initial hash
+    const compareHash = lastSavedDataHash || initialDataHash;
+
+    if (currentHash !== compareHash) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [formDataForAutoSave, lastSavedDataHash, initialDataHash, isInitialized]);
+
+  // Warn user when leaving page with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Handle manual save
+  const handleManualSave = useCallback(async () => {
+    await triggerSave();
+    toast.success("Draft saved");
+  }, [triggerSave]);
+
+  // Handle draft selection - restore form data AND dropdown selections
+  const handleSelectDraft = useCallback((draftData: QuotationDataWithIds, _draftId: string) => {
+    form.reset(draftData);
+    // Restore dropdown selections from loaded draft
+    setSelectedClientId(draftData.clientId);
+    setSelectedCompanyId(draftData.companyInfoId);
+    setSelectedBankAccountId(draftData.bankInfoId);
+    // Reset hash states - the loaded draft becomes the new baseline
+    const draftHash = JSON.stringify({
+      ...draftData,
+      clientId: draftData.clientId,
+      companyInfoId: draftData.companyInfoId,
+      bankInfoId: draftData.bankInfoId,
+    });
+    setInitialDataHash(draftHash);
+    setLastSavedDataHash(draftHash);
+    setHasUnsavedChanges(false);
+    toast.success("Draft loaded");
+  }, [form]);
+
+  // Handle create new quotation
+  const handleCreateNew = useCallback(() => {
+    clearCurrentDraft();
+    form.reset({
+      quotationNumber: getNextQuotationNumber(),
+      date: new Date().toISOString().split("T")[0],
+      validUntil: "",
+      from: selectedCompany || {
+        name: "",
+        registrationNumber: "",
+        address: "",
+        email: "",
+        phone: "",
+      },
+      to: {
+        name: "",
+        registrationNumber: "",
+        address: "",
+        email: "",
+        phone: "",
+      },
+      projectTitle: "",
+      items: [],
+      subtotal: 0,
+      discount: 0,
+      tax: 0,
+      shipping: 0,
+      total: 0,
+      terms: [
+        "Payment is due within 30 days of invoice date.",
+        "Delivery will be made within 14 days of receiving payment.",
+        "Shipping costs are included in the total price.",
+        "This quotation is valid until the expiration date listed above.",
+        "To accept this quotation, please sign and return a copy, or issue a purchase order referencing this quote number before the expiration date.",
+      ],
+      notes: [],
+      bankInfo: {
+        bankName: "",
+        accountNumber: "",
+        accountName: "",
+      },
+    });
+    setSelectedClientId(undefined);
+    // Reset hash states for new quotation - will be set by effect on next render
+    setInitialDataHash("");
+    setLastSavedDataHash("");
+    setHasUnsavedChanges(false);
+    toast.success("New quotation started");
+  }, [clearCurrentDraft, form, getNextQuotationNumber, selectedCompany]);
+
   // Watch items for subtotal calculation
   const watchItems = form.watch("items");
   const watchDiscount = form.watch("discount");
   const watchTax = form.watch("tax");
   const watchShipping = form.watch("shipping");
+
+  // Update form when selected company changes
+  useEffect(() => {
+    if (selectedCompany) {
+      form.setValue("from.name", selectedCompany.name);
+      form.setValue("from.registrationNumber", selectedCompany.registrationNumber || "");
+      form.setValue("from.address", selectedCompany.address);
+      form.setValue("from.email", selectedCompany.email);
+      form.setValue("from.phone", selectedCompany.phone);
+    }
+  }, [selectedCompany, form]);
 
   // Calculate totals
   useEffect(() => {
@@ -151,30 +399,74 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
     }
   };
 
-  const handleSaveAsNewClient = () => {
+  const handleSaveAsNewClient = async () => {
     const toData = form.getValues("to");
-    if (toData.name && toData.email) {
-      addClient({
+    if (!toData.name) {
+      toast.error("Please enter a company name");
+      return;
+    }
+    if (!toData.email) {
+      toast.error("Please enter an email address");
+      return;
+    }
+    try {
+      await addClient({
         name: toData.name,
         registrationNumber: toData.registrationNumber || "",
         address: toData.address,
         email: toData.email,
         phone: toData.phone,
       });
+      toast.success(`Client "${toData.name}" saved successfully`);
+    } catch {
+      toast.error("Failed to save client");
     }
   };
 
-  const handleCompanySetup = () => {
-    const fromData = form.getValues("from");
-    if (fromData.name && fromData.email) {
-      setCompany({
-        name: fromData.name,
-        registrationNumber: fromData.registrationNumber || "",
-        address: fromData.address,
-        email: fromData.email,
-        phone: fromData.phone,
-      });
-      setShowCompanySetup(false);
+  const handleCompanySelect = (company: CompanyInfo | null, companyId?: string) => {
+    if (company && companyId) {
+      selectCompany(companyId);
+      setSelectedCompanyId(companyId);
+      form.setValue("from.name", company.name);
+      form.setValue("from.registrationNumber", company.registrationNumber || "");
+      form.setValue("from.address", company.address);
+      form.setValue("from.email", company.email);
+      form.setValue("from.phone", company.phone);
+    }
+  };
+
+  const handleBankAccountSelect = (
+    bankInfo: { bankName: string; accountNumber: string; accountName: string } | null,
+    bankInfoId?: string
+  ) => {
+    if (bankInfo && bankInfoId) {
+      form.setValue("bankInfo.bankName", bankInfo.bankName);
+      form.setValue("bankInfo.accountNumber", bankInfo.accountNumber);
+      form.setValue("bankInfo.accountName", bankInfo.accountName);
+      setSelectedBankAccountId(bankInfoId);
+    }
+  };
+
+  const handleBankSetup = async () => {
+    const bankData = form.getValues("bankInfo");
+    if (bankData?.bankName && bankData?.accountNumber && bankData?.accountName) {
+      try {
+        const newBankAccount = await addBankAccount({
+          bankName: bankData.bankName,
+          accountNumber: bankData.accountNumber,
+          accountName: bankData.accountName,
+          isDefault: bankAccounts.length === 0,
+        });
+        if (newBankAccount) {
+          setSelectedBankAccountId(newBankAccount.id);
+        }
+        setShowBankSetup(false);
+        toast.success("Bank account saved successfully");
+      } catch {
+        toast.error("Failed to save bank account");
+      }
+    } else {
+      toast.error("Please fill in all bank account fields");
     }
   };
 
@@ -185,25 +477,51 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
 
   return (
     <Form {...form}>
-      {/* Company Setup Dialog */}
-      <Dialog open={showCompanySetup} onOpenChange={setShowCompanySetup}>
-        <DialogContent className="sm:max-w-[600px]">
+      {/* Bank Setup Dialog */}
+      <Dialog open={showBankSetup} onOpenChange={setShowBankSetup}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Setup Your Company Details
+              <Landmark className="h-5 w-5" />
+              Add Bank Account
             </DialogTitle>
             <DialogDescription>
-              Let&apos;s save your company information so you don&apos;t have to enter it every time
+              Save your bank account information for quotations
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <FormField
               control={form.control}
-              name="from.name"
+              name="bankInfo.bankName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Company Name *</FormLabel>
+                  <FormLabel>Bank Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g., Maybank, CIMB" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bankInfo.accountNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Number *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="1234567890" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bankInfo.accountName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Name *</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="Your Company Name" />
                   </FormControl>
@@ -211,68 +529,27 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="from.registrationNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Registration Number</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="123456-A" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="from.address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address *</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={3} placeholder="Company address" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="from.email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email *</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="email" placeholder="email@company.com" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="from.phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="+60 12-345 6789" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <Button onClick={handleCompanySetup} className="w-full" type="button">
+            <Button onClick={handleBankSetup} className="w-full" type="button">
               <Save className="mr-2 h-4 w-4" />
-              Save Company Details
+              Save Bank Account
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+          {/* Header with Draft Selector and Save Status */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 mb-4 rounded-lg border bg-muted/50">
+            <div className="flex items-center gap-3">
+              <DraftSelector
+                currentDraftId={currentDraftId}
+                onSelectDraft={handleSelectDraft}
+                onCreateNew={handleCreateNew}
+              />
+            </div>
+            <SaveStatusIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+          </div>
+
           {/* Quotation Details */}
           <Card>
             <CardHeader>
@@ -338,89 +615,84 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
 
           {/* From & To */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* From (Company) */}
+            {/* From (Company) - Read Only */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl">From (Your Company)</CardTitle>
-                  {hasCompany() && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowCompanySetup(true)}
-                    >
-                      Edit
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <Link href="/dashboard/company">
+                      Manage Companies
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </Link>
+                  </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <FormField
-                  control={form.control}
-                  name="from.name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="from.registrationNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registration Number</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="from.address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} rows={3} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="from.email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="from.phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <CardContent className="space-y-4">
+                {companies.length > 0 ? (
+                  <>
+                    <div>
+                      <FormLabel>Select Company</FormLabel>
+                      <div className="mt-1.5">
+                        <CompanyCombobox
+                          value={selectedCompanyId}
+                          onSelect={handleCompanySelect}
+                        />
+                      </div>
+                    </div>
+                    {selectedCompany && (
+                      <>
+                        <Separator />
+                        <div className="flex gap-4">
+                          {selectedCompany.logoUrl && (
+                            <Image
+                              src={selectedCompany.logoUrl}
+                              alt={`${selectedCompany.name} logo`}
+                              width={64}
+                              height={64}
+                              className="rounded-lg border object-contain flex-shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 space-y-1">
+                            <p className="font-semibold text-lg">{selectedCompany.name}</p>
+                            {selectedCompany.registrationNumber && (
+                              <p className="text-sm text-muted-foreground">
+                                {selectedCompany.registrationNumber}
+                              </p>
+                            )}
+                            <p className="text-sm whitespace-pre-line">{selectedCompany.address}</p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground pt-1">
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {selectedCompany.email}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {selectedCompany.phone}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground mb-3">No company profile yet</p>
+                    <Button type="button" asChild>
+                      <Link href="/dashboard/company">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Company
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -771,9 +1043,32 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
           {/* Bank Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Bank Information</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-2xl">Bank Information</CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBankSetup(true)}
+                >
+                  {bankAccounts.length > 0 ? "Add New" : "Add"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {bankAccounts.length > 0 && (
+                <div>
+                  <FormLabel>Select Bank Account</FormLabel>
+                  <div className="mt-1.5">
+                    <BankAccountCombobox
+                      value={selectedBankAccountId}
+                      onSelect={handleBankAccountSelect}
+                      onAddNew={() => setShowBankSetup(true)}
+                    />
+                  </div>
+                </div>
+              )}
+              {bankAccounts.length > 0 && <Separator />}
               <FormField
                 control={form.control}
                 name="bankInfo.bankName"
@@ -781,7 +1076,7 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
                   <FormItem>
                     <FormLabel>Bank Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="e.g., Maybank, CIMB" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -794,7 +1089,7 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
                   <FormItem>
                     <FormLabel>Account Number</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="1234567890" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -807,22 +1102,43 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
                   <FormItem>
                     <FormLabel>Account Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="Your Company Name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {form.watch("bankInfo.bankName") && !selectedBankAccountId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBankSetup}
+                  className="w-full"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save as New Bank Account
+                </Button>
+              )}
             </CardContent>
           </Card>
 
           {/* Submit Button */}
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end pt-4 pb-20">
             <Button type="submit" size="lg" className="w-full sm:w-auto min-w-[240px]">
               Generate Quotation Preview
             </Button>
           </div>
         </form>
+
+        {/* Floating Save Button - shows when there are unsaved changes */}
+        <FloatingSaveButton
+          isVisible={hasUnsavedChanges || saveStatus === "error"}
+          isSaving={saveStatus === "saving"}
+          onSave={handleManualSave}
+          saveStatus={saveStatus}
+          lastSavedAt={lastSavedAt}
+        />
       </Form>
   );
 }

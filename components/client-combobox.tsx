@@ -33,8 +33,10 @@ export function ClientCombobox({ value, onSelect, onAddNew }: ClientComboboxProp
   const getFavoriteClients = useClientStore((state) => state.getFavoriteClients);
   const markAsUsed = useClientStore((state) => state.markAsUsed);
 
-  const recentClients = React.useMemo(() => getRecentClients(5), [getRecentClients]);
-  const favoriteClients = React.useMemo(() => getFavoriteClients(), [getFavoriteClients]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- clients is needed to recompute when data changes
+  const recentClients = React.useMemo(() => getRecentClients(5), [getRecentClients, clients]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- clients is needed to recompute when data changes
+  const favoriteClients = React.useMemo(() => getFavoriteClients(), [getFavoriteClients, clients]);
 
   const selectedClient = clients.find((c) => c.id === value);
 
@@ -173,19 +175,20 @@ export function ClientCombobox({ value, onSelect, onAddNew }: ClientComboboxProp
                 ))}
             </CommandGroup>
 
-            <CommandGroup>
+            <CommandGroup forceMount>
               <CommandItem
                 onSelect={() => {
                   onAddNew();
                   setOpen(false);
                 }}
                 className="text-primary"
+                forceMount
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Client
               </CommandItem>
               {value && (
-                <CommandItem onSelect={handleClear} className="text-muted-foreground">
+                <CommandItem onSelect={handleClear} className="text-muted-foreground" forceMount>
                   Clear Selection
                 </CommandItem>
               )}

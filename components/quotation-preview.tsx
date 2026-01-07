@@ -40,11 +40,19 @@ export default function QuotationPreview({ data, onEdit }: QuotationPreviewProps
       <div className="quotation-preview bg-white text-black p-8 max-w-[210mm] mx-auto">
         {/* Header */}
         <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-black">
-          <img
-            src="/images/default-logo.png"
-            alt="Company Logo"
-            className="h-16 object-contain"
-          />
+          {data.from.logoUrl ? (
+            <img
+              src={data.from.logoUrl}
+              alt={`${data.from.name} Logo`}
+              className="h-16 object-contain"
+            />
+          ) : (
+            <img
+              src="/images/default-logo.png"
+              alt="Company Logo"
+              className="h-16 object-contain"
+            />
+          )}
           <div className="text-right text-sm">
             <div className="text-lg font-bold bg-gray-100 px-4 py-2 rounded mb-2">
               {data.quotationNumber}

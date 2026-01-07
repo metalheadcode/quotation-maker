@@ -68,37 +68,41 @@ Configured in `tsconfig.json`:
 ## Supabase
 
 ### Rules for Claude Code
-- **NEVER** create migration files manually. Always use `supabase migration new <name>` command
-- **NEVER** run `supabase db push` - let the user handle database pushes
-- **NEVER** create database types manually. Always use `supabase gen types typescript --local > lib/supabase/database.types.ts` or let user generate them
+- **NEVER** run `supabase db push` - this pushes to production and MUST be done by the user only
+- **NEVER** create migration files manually (no direct file creation) - always use `supabase migration new <name>` command
+- **NEVER** create database types manually - always generate using `supabase gen types typescript --local`
+- **CAN** run `supabase migration new <descriptive_name>` to create new migrations
+- **CAN** run `supabase db reset` to test migrations locally
+- **CAN** run `supabase gen types typescript --local > lib/supabase/database.types.ts` after successful reset
 - Use `gen_random_uuid()` instead of `uuid_generate_v4()` for UUID defaults (PostgreSQL 13+ built-in)
 - Always enable Row Level Security (RLS) on all tables
 - Always add `user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE` for user-owned data
 
-### Supabase Commands & Workflow
-```bash
-# Create new migration (use this instead of manual file creation)
-supabase migration new <migration_name>
+### Migration Workflow (Claude MUST follow this)
+1. **Create migration**: Run `supabase migration new <descriptive_name>`
+2. **Write SQL**: Edit the created migration file with the SQL schema changes
+3. **Test locally**: Run `supabase db reset` to validate migrations work
+4. **Fix issues**: If reset fails, fix the migration SQL and run reset again
+5. **Generate types**: Run `supabase gen types typescript --local > lib/supabase/database.types.ts`
+6. **Ask user to push**: Tell the user to run `supabase db push` to apply to remote database
 
-# Reset local database and apply all migrations (validates migrations work)
+### Supabase Commands Reference
+```bash
+# Create new migration (Claude CAN run this)
+supabase migration new <descriptive_migration_name>
+
+# Reset local database and apply all migrations (Claude CAN run this)
 supabase db reset
 
-# Generate TypeScript types from LOCAL database (after reset)
+# Generate TypeScript types from LOCAL database (Claude CAN run this)
 supabase gen types typescript --local > lib/supabase/database.types.ts
 
-# Push migrations to remote (only after local reset succeeds - let user run this)
+# Push migrations to remote (USER ONLY - Claude must NOT run this)
 supabase db push
 
 # Pull remote schema
 supabase db pull
 ```
-
-### Migration Workflow
-1. Create migration: `supabase migration new <name>`
-2. Write SQL in the created migration file
-3. Test locally: `supabase db reset` (user runs this)
-4. Generate types: `supabase gen types typescript --local > lib/supabase/database.types.ts` (user runs this)
-5. If no issues, push to remote: `supabase db push` (user runs this)
 
 ### Supabase Client Files
 - `lib/supabase/client.ts` - Browser client for client components

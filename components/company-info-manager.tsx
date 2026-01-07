@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CompanyInfoDB } from "@/lib/types/quotation";
-import { Plus, Edit2, Trash2, Star } from "lucide-react";
+import { Plus, Edit2, Trash2, Star, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface CompanyInfoManagerProps {
@@ -26,6 +27,10 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     registrationNumber: "",
@@ -33,6 +38,7 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
     email: "",
     phone: "",
     isDefault: false,
+    logoUrl: "",
   });
 
   useEffect(() => {
@@ -54,10 +60,70 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
     }
   };
 
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    const uploadFormData = new FormData();
+    uploadFormData.append("file", file);
+    uploadFormData.append("bucket", "company-logos");
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: uploadFormData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to upload logo");
+    }
+
+    const data = await response.json();
+    return data.url;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Invalid file type. Allowed: JPG, PNG, WebP, SVG");
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 5MB");
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    setFormData({ ...formData, logoUrl: "" });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      setIsUploading(true);
+      let logoUrl = formData.logoUrl;
+
+      // Upload logo if there's a new file
+      if (logoFile) {
+        const uploadedUrl = await uploadLogo(logoFile);
+        if (uploadedUrl) {
+          logoUrl = uploadedUrl;
+        }
+      }
+
       const url = editingId
         ? `/api/company-info/${editingId}`
         : "/api/company-info";
@@ -66,7 +132,15 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          registration_number: formData.registrationNumber,
+          address: formData.address,
+          email: formData.email,
+          phone: formData.phone,
+          is_default: formData.isDefault,
+          logo_url: logoUrl || null,
+        }),
       });
 
       if (response.ok) {
@@ -84,6 +158,8 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
     } catch (error) {
       console.error("Error saving company info:", error);
       toast.error("An error occurred");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -96,7 +172,10 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
       email: companyInfo.email,
       phone: companyInfo.phone,
       isDefault: companyInfo.isDefault,
+      logoUrl: companyInfo.logoUrl || "",
     });
+    setLogoPreview(companyInfo.logoUrl || null);
+    setLogoFile(null);
     setIsDialogOpen(true);
   };
 
@@ -130,8 +209,14 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
       email: "",
       phone: "",
       isDefault: false,
+      logoUrl: "",
     });
     setEditingId(null);
+    setLogoFile(null);
+    setLogoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleDialogChange = (open: boolean) => {
@@ -167,6 +252,50 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                {/* Logo Upload */}
+                <div className="grid gap-2">
+                  <Label>Company Logo</Label>
+                  <div className="flex items-center gap-4">
+                    {logoPreview ? (
+                      <div className="relative">
+                        <Image
+                          src={logoPreview}
+                          alt="Logo preview"
+                          width={80}
+                          height={80}
+                          className="rounded-lg border object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveLogo}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-20 h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                      >
+                        <Upload className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground mt-1">Upload</span>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      <p>JPG, PNG, WebP, or SVG</p>
+                      <p>Max 5MB</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid gap-2">
                   <Label htmlFor="name">Company Name *</Label>
                   <Input
@@ -247,11 +376,19 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
                   type="button"
                   variant="outline"
                   onClick={() => handleDialogChange(false)}
+                  disabled={isUploading}
                 >
                   Cancel
                 </Button>
-                <Button type="submit">
-                  {editingId ? "Update" : "Create"}
+                <Button type="submit" disabled={isUploading}>
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    editingId ? "Update" : "Create"
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -272,13 +409,23 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
               className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold">{info.name}</h4>
-                    {info.isDefault && (
-                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                    )}
-                  </div>
+                <div className="flex items-start gap-4">
+                  {info.logoUrl && (
+                    <Image
+                      src={info.logoUrl}
+                      alt={`${info.name} logo`}
+                      width={48}
+                      height={48}
+                      className="rounded-lg border object-contain flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold">{info.name}</h4>
+                      {info.isDefault && (
+                        <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                      )}
+                    </div>
                   {info.registrationNumber && (
                     <p className="text-sm text-muted-foreground">
                       Reg: {info.registrationNumber}
@@ -287,6 +434,7 @@ export function CompanyInfoManager({ onSelect }: CompanyInfoManagerProps) {
                   <p className="text-sm">{info.address}</p>
                   <p className="text-sm">{info.email}</p>
                   <p className="text-sm">{info.phone}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {onSelect && (

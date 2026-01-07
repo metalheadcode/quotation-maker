@@ -34,6 +34,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_info: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_name?: string
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           address: string | null
@@ -122,6 +155,7 @@ export type Database = {
         Row: {
           bank_account_name: string | null
           bank_account_number: string | null
+          bank_info_id: string | null
           bank_name: string | null
           client_address: string | null
           client_company: string | null
@@ -160,6 +194,7 @@ export type Database = {
         Insert: {
           bank_account_name?: string | null
           bank_account_number?: string | null
+          bank_info_id?: string | null
           bank_name?: string | null
           client_address?: string | null
           client_company?: string | null
@@ -198,6 +233,7 @@ export type Database = {
         Update: {
           bank_account_name?: string | null
           bank_account_number?: string | null
+          bank_info_id?: string | null
           bank_name?: string | null
           client_address?: string | null
           client_company?: string | null
@@ -234,6 +270,13 @@ export type Database = {
           valid_until?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quotations_bank_info_id_fkey"
+            columns: ["bank_info_id"]
+            isOneToOne: false
+            referencedRelation: "bank_info"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotations_client_id_fkey"
             columns: ["client_id"]

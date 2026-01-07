@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, registration_number, address, email, phone, is_default } =
+    const { name, registration_number, address, email, phone, is_default, logo_url } =
       body;
 
     if (!name || !address || !email || !phone) {
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         is_default: is_default || false,
+        logo_url: logo_url || null,
       })
       .select()
       .single();
