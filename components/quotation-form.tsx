@@ -50,11 +50,6 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
         "To accept this quotation, please sign and return a copy, or issue a purchase order referencing this quote number before the expiration date.",
       ],
       notes: [],
-      bankInfo: {
-        bankName: "",
-        accountNumber: "",
-        accountName: "",
-      },
     }
   );
 
@@ -481,53 +476,6 @@ export default function QuotationForm({ onSubmit, initialData }: QuotationFormPr
           <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
             <span className="text-xl font-bold">Total Amount</span>
             <span className="text-2xl font-bold text-primary">MYR {formData.total.toFixed(2)}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Bank Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="bankName">Bank Name</Label>
-            <Input
-              id="bankName"
-              value={formData.bankInfo.bankName}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  bankInfo: { ...formData.bankInfo, bankName: e.target.value },
-                })
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="accountNumber">Account Number</Label>
-            <Input
-              id="accountNumber"
-              value={formData.bankInfo.accountNumber}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  bankInfo: { ...formData.bankInfo, accountNumber: e.target.value },
-                })
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="accountName">Account Name</Label>
-            <Input
-              id="accountName"
-              value={formData.bankInfo.accountName}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  bankInfo: { ...formData.bankInfo, accountName: e.target.value },
-                })
-              }
-            />
           </div>
         </CardContent>
       </Card>

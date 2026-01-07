@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { QuotationData, CompanyInfo } from "@/lib/types/quotation";
 import { quotationDataSchema, QuotationFormData } from "@/lib/schemas/quotation";
-import { Plus, Trash2, Save, Building2, Landmark, ExternalLink, Mail, Phone, Users, Star } from "lucide-react";
+import { Plus, Trash2, Building2, ExternalLink, Mail, Phone, Users, Star } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -23,22 +23,13 @@ import {
 } from "@/components/ui/form";
 import { ClientCombobox } from "@/components/client-combobox";
 import { CompanyCombobox } from "@/components/company-combobox";
-import { BankAccountCombobox } from "@/components/bank-account-combobox";
 import { DraftSelector } from "@/components/draft-selector";
 import { SaveStatusIndicator } from "@/components/save-status-indicator";
 import { FloatingSaveButton } from "@/components/floating-save-button";
 import { useCompanyStore } from "@/stores/useCompanyStore";
 import { useClientStore } from "@/stores/useClientStore";
 import { useQuotationStore, QuotationDataWithIds } from "@/stores/useQuotationStore";
-import { useBankInfoStore } from "@/stores/useBankInfoStore";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 interface QuotationFormProps {
@@ -62,14 +53,8 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
   const currentDraftId = useQuotationStore((state) => state.currentDraftId);
   const clearCurrentDraft = useQuotationStore((state) => state.clearCurrentDraft);
 
-  const bankAccounts = useBankInfoStore((state) => state.bankAccounts);
-  const fetchBankAccounts = useBankInfoStore((state) => state.fetchBankAccounts);
-  const addBankAccount = useBankInfoStore((state) => state.addBankAccount);
-
   const [selectedClientId, setSelectedClientId] = useState<string>();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>();
-  const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>();
-  const [showBankSetup, setShowBankSetup] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialDataHash, setInitialDataHash] = useState<string>("");
@@ -82,12 +67,11 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
         fetchCompanies(),
         fetchClients(),
         fetchDrafts(),
-        fetchBankAccounts(),
       ]);
       setIsInitialized(true);
     };
     initializeData();
-  }, [fetchCompanies, fetchClients, fetchDrafts, fetchBankAccounts]);
+  }, [fetchCompanies, fetchClients, fetchDrafts]);
 
   // Set selected company ID when company is loaded
   useEffect(() => {
@@ -131,11 +115,6 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
         "To accept this quotation, please sign and return a copy, or issue a purchase order referencing this quote number before the expiration date.",
       ],
       notes: [],
-      bankInfo: {
-        bankName: "",
-        accountNumber: "",
-        accountName: "",
-      },
     },
   });
 
@@ -143,20 +122,6 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
     control: form.control,
     name: "items",
   });
-
-  // Auto-select default bank account when loaded (for new quotations)
-  useEffect(() => {
-    if (isInitialized && bankAccounts.length > 0 && !selectedBankAccountId && !initialData) {
-      const defaultAccount = bankAccounts.find((b) => b.isDefault) || bankAccounts[0];
-      if (defaultAccount) {
-        setSelectedBankAccountId(defaultAccount.id);
-        // Also populate the form fields
-        form.setValue("bankInfo.bankName", defaultAccount.bankName);
-        form.setValue("bankInfo.accountNumber", defaultAccount.accountNumber);
-        form.setValue("bankInfo.accountName", defaultAccount.accountName);
-      }
-    }
-  }, [isInitialized, bankAccounts, selectedBankAccountId, initialData, form]);
 
   // Watch entire form for auto-save
   const watchedFormData = form.watch();
@@ -194,17 +159,11 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
       total: data.total,
       terms: data.terms,
       notes: data.notes,
-      bankInfo: {
-        bankName: data.bankInfo?.bankName || "",
-        accountNumber: data.bankInfo?.accountNumber || "",
-        accountName: data.bankInfo?.accountName || "",
-      },
       clientId: selectedClientId,
       companyInfoId: selectedCompanyId,
-      bankInfoId: selectedBankAccountId,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(watchedFormData), isInitialized, selectedClientId, selectedCompanyId, selectedBankAccountId]);
+  }, [JSON.stringify(watchedFormData), isInitialized, selectedClientId, selectedCompanyId]);
 
   // Auto-save hook
   const { saveStatus, lastSavedAt, triggerSave } = useAutoSave(formDataForAutoSave, {
@@ -265,18 +224,17 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
   }, [triggerSave]);
 
   // Handle draft selection - restore form data AND dropdown selections
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSelectDraft = useCallback((draftData: QuotationDataWithIds, _draftId: string) => {
     form.reset(draftData);
     // Restore dropdown selections from loaded draft
     setSelectedClientId(draftData.clientId);
     setSelectedCompanyId(draftData.companyInfoId);
-    setSelectedBankAccountId(draftData.bankInfoId);
     // Reset hash states - the loaded draft becomes the new baseline
     const draftHash = JSON.stringify({
       ...draftData,
       clientId: draftData.clientId,
       companyInfoId: draftData.companyInfoId,
-      bankInfoId: draftData.bankInfoId,
     });
     setInitialDataHash(draftHash);
     setLastSavedDataHash(draftHash);
@@ -320,11 +278,6 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
         "To accept this quotation, please sign and return a copy, or issue a purchase order referencing this quote number before the expiration date.",
       ],
       notes: [],
-      bankInfo: {
-        bankName: "",
-        accountNumber: "",
-        accountName: "",
-      },
     });
     setSelectedClientId(undefined);
     // Reset hash states for new quotation - will be set by effect on next render
@@ -412,41 +365,6 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
     }
   };
 
-  const handleBankAccountSelect = (
-    bankInfo: { bankName: string; accountNumber: string; accountName: string } | null,
-    bankInfoId?: string
-  ) => {
-    if (bankInfo && bankInfoId) {
-      form.setValue("bankInfo.bankName", bankInfo.bankName);
-      form.setValue("bankInfo.accountNumber", bankInfo.accountNumber);
-      form.setValue("bankInfo.accountName", bankInfo.accountName);
-      setSelectedBankAccountId(bankInfoId);
-    }
-  };
-
-  const handleBankSetup = async () => {
-    const bankData = form.getValues("bankInfo");
-    if (bankData?.bankName && bankData?.accountNumber && bankData?.accountName) {
-      try {
-        const newBankAccount = await addBankAccount({
-          bankName: bankData.bankName,
-          accountNumber: bankData.accountNumber,
-          accountName: bankData.accountName,
-          isDefault: bankAccounts.length === 0,
-        });
-        if (newBankAccount) {
-          setSelectedBankAccountId(newBankAccount.id);
-        }
-        setShowBankSetup(false);
-        toast.success("Bank account saved successfully");
-      } catch {
-        toast.error("Failed to save bank account");
-      }
-    } else {
-      toast.error("Please fill in all bank account fields");
-    }
-  };
-
   const handleFormSubmit = (data: QuotationFormData) => {
     incrementQuotationNumber();
     onSubmit(data as QuotationData);
@@ -454,66 +372,6 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
 
   return (
     <Form {...form}>
-      {/* Bank Setup Dialog */}
-      <Dialog open={showBankSetup} onOpenChange={setShowBankSetup}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Landmark className="h-5 w-5" />
-              Add Bank Account
-            </DialogTitle>
-            <DialogDescription>
-              Save your bank account information for quotations
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="bankInfo.bankName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bank Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="e.g., Maybank, CIMB" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bankInfo.accountNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Account Number *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="1234567890" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bankInfo.accountName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Account Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Your Company Name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button onClick={handleBankSetup} className="w-full" type="button">
-              <Save className="mr-2 h-4 w-4" />
-              Save Bank Account
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
           {/* Header with Draft Selector and Save Status */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 mb-4 rounded-lg border bg-muted/50">
@@ -995,89 +853,6 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
                   MYR {form.watch("total")?.toFixed(2) || "0.00"}
                 </span>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Bank Information */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-2xl">Bank Information</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBankSetup(true)}
-                >
-                  {bankAccounts.length > 0 ? "Add New" : "Add"}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {bankAccounts.length > 0 && (
-                <div>
-                  <FormLabel>Select Bank Account</FormLabel>
-                  <div className="mt-1.5">
-                    <BankAccountCombobox
-                      value={selectedBankAccountId}
-                      onSelect={handleBankAccountSelect}
-                      onAddNew={() => setShowBankSetup(true)}
-                    />
-                  </div>
-                </div>
-              )}
-              {bankAccounts.length > 0 && <Separator />}
-              <FormField
-                control={form.control}
-                name="bankInfo.bankName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bank Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., Maybank, CIMB" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bankInfo.accountNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Number</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="1234567890" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bankInfo.accountName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Your Company Name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {form.watch("bankInfo.bankName") && !selectedBankAccountId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBankSetup}
-                  className="w-full"
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save as New Bank Account
-                </Button>
-              )}
             </CardContent>
           </Card>
 

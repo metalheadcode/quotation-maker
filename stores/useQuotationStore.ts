@@ -45,7 +45,6 @@ interface QuotationStore {
 export interface QuotationDataWithIds extends QuotationData {
   clientId?: string;
   companyInfoId?: string;
-  bankInfoId?: string;
 }
 
 // Helper to convert form data to API format
@@ -74,10 +73,6 @@ const formDataToApiFormat = (data: QuotationDataWithIds) => ({
   total: data.total,
   terms: data.terms?.join("\n"),
   notes: data.notes?.join("\n"),
-  bank_name: data.bankInfo?.bankName,
-  bank_account_number: data.bankInfo?.accountNumber,
-  bank_account_name: data.bankInfo?.accountName,
-  bank_info_id: data.bankInfoId || null,
 });
 
 // Helper to convert API response to form data (includes IDs for restoring selections)
@@ -108,15 +103,9 @@ const apiToFormData = (apiData: Record<string, unknown>): QuotationDataWithIds =
   total: (apiData.total as number) || 0,
   terms: ((apiData.terms as string) || "").split("\n").filter(Boolean),
   notes: ((apiData.notes as string) || "").split("\n").filter(Boolean),
-  bankInfo: {
-    bankName: (apiData.bank_name as string) || "",
-    accountNumber: (apiData.bank_account_number as string) || "",
-    accountName: (apiData.bank_account_name as string) || "",
-  },
   // Include IDs for restoring dropdown selections when loading drafts
   clientId: (apiData.client_id as string) || undefined,
   companyInfoId: (apiData.company_info_id as string) || undefined,
-  bankInfoId: (apiData.bank_info_id as string) || undefined,
 });
 
 export const useQuotationStore = create<QuotationStore>()(

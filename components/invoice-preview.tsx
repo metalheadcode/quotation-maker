@@ -1,25 +1,22 @@
 "use client";
 
-import * as React from "react";
-import { QuotationData } from "@/lib/types/quotation";
+import { InvoiceData } from "@/lib/types/invoice";
 import { Button } from "@/components/ui/button";
-import { Printer, FileText } from "lucide-react";
-import { CreateInvoiceDialog } from "./create-invoice-dialog";
+import { Printer } from "lucide-react";
+import { InvoiceStatusBadge } from "./invoice-status-badge";
 
-interface QuotationPreviewProps {
-  data: QuotationData;
-  quotationId?: string;
+interface InvoicePreviewProps {
+  data: InvoiceData;
   onEdit?: () => void;
 }
 
-export default function QuotationPreview({ data, quotationId, onEdit }: QuotationPreviewProps) {
-  const [showCreateInvoice, setShowCreateInvoice] = React.useState(false);
-
+export default function InvoicePreview({ data, onEdit }: InvoicePreviewProps) {
   const handlePrint = () => {
     window.print();
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -30,37 +27,23 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
 
   return (
     <div>
-      <div className="no-print mb-6 flex gap-3 justify-end">
+      <div className="no-print mb-6 flex gap-3 justify-end items-center">
+        <InvoiceStatusBadge status={data.status} />
         {onEdit && (
           <Button variant="outline" onClick={onEdit}>
-            Edit Quotation
-          </Button>
-        )}
-        {quotationId && (
-          <Button variant="outline" onClick={() => setShowCreateInvoice(true)}>
-            <FileText className="mr-2 h-4 w-4" />
-            Create Invoice
+            Edit Invoice
           </Button>
         )}
         <Button onClick={handlePrint}>
           <Printer className="mr-2 h-4 w-4" />
-          Print Quotation
+          Print Invoice
         </Button>
       </div>
 
-      {quotationId && (
-        <CreateInvoiceDialog
-          quotationId={quotationId}
-          quotationNumber={data.quotationNumber}
-          open={showCreateInvoice}
-          onOpenChange={setShowCreateInvoice}
-        />
-      )}
-
-      <div className="quotation-preview bg-white text-black p-8 max-w-[210mm] mx-auto">
+      <div className="invoice-preview bg-white text-black p-8 max-w-[210mm] mx-auto">
         {/* Header */}
         <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-black">
-  {/* eslint-disable @next/next/no-img-element -- Using img for print compatibility */}
+          {/* eslint-disable @next/next/no-img-element -- Using img for print compatibility */}
           {data.from.logoUrl ? (
             <img
               src={data.from.logoUrl}
@@ -77,12 +60,27 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
           {/* eslint-enable @next/next/no-img-element */}
           <div className="text-right text-sm">
             <div className="text-lg font-bold bg-gray-100 px-4 py-2 rounded mb-2">
-              {data.quotationNumber}
+              INVOICE
             </div>
-            <div>Date: {formatDate(data.date)}</div>
-            <div>Valid Until: {formatDate(data.validUntil)}</div>
+            <div className="text-lg font-bold mb-1">{data.invoiceNumber}</div>
+            <div>Date: {formatDate(data.invoiceDate)}</div>
+            <div className="font-semibold text-red-600">
+              Due: {formatDate(data.dueDate)}
+            </div>
+            {data.poNumber && (
+              <div className="mt-1 text-xs bg-blue-50 px-2 py-1 rounded">
+                PO: {data.poNumber}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Reference to Quotation */}
+        {data.quotationNumber && (
+          <div className="text-xs text-gray-600 mb-4">
+            Reference: Quotation {data.quotationNumber}
+          </div>
+        )}
 
         {/* Company Details */}
         <div className="grid grid-cols-2 gap-6 mb-6">
@@ -96,7 +94,9 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
                 {data.from.registrationNumber}
               </div>
             )}
-            <div className="text-sm mb-2 whitespace-pre-line">{data.from.address}</div>
+            <div className="text-sm mb-2 whitespace-pre-line">
+              {data.from.address}
+            </div>
             <div className="text-sm text-black">
               <div>📧 {data.from.email}</div>
               <div>📱 {data.from.phone}</div>
@@ -105,7 +105,7 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
 
           <div>
             <div className="font-bold text-sm text-black mb-2 border-b border-gray-300 pb-1">
-              TO
+              BILL TO
             </div>
             <div className="font-bold text-sm mb-1">{data.to.name}</div>
             {data.to.registrationNumber && (
@@ -113,7 +113,9 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
                 {data.to.registrationNumber}
               </div>
             )}
-            <div className="text-sm mb-2 whitespace-pre-line">{data.to.address}</div>
+            <div className="text-sm mb-2 whitespace-pre-line">
+              {data.to.address}
+            </div>
             <div className="text-sm text-black">
               <div>📧 {data.to.email}</div>
               <div>📞 {data.to.phone}</div>
@@ -166,14 +168,43 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
         </table>
 
         {/* Summary Section */}
-        <div className="grid grid-cols-[60%_40%] gap-6 mt-6">
+        <div className="grid grid-cols-[55%_45%] gap-6 mt-6">
           <div className="text-sm">
-            <div className="font-bold text-black mb-2">Terms & Conditions</div>
-            <ul className="space-y-1">
-              {data.terms.map((term, index) => (
-                <li key={index}>{index + 1}. {term}</li>
-              ))}
-            </ul>
+            {/* Bank Information - Prominent for Invoice */}
+            <div className="bg-blue-50 p-4 rounded border border-blue-200 mb-4">
+              <div className="font-bold text-black mb-2 text-base">
+                Payment Information
+              </div>
+              <div className="space-y-1">
+                <div>
+                  <span className="font-semibold">Bank:</span>{" "}
+                  {data.bankInfo.bankName}
+                </div>
+                <div>
+                  <span className="font-semibold">Account:</span>{" "}
+                  {data.bankInfo.accountNumber}
+                </div>
+                <div>
+                  <span className="font-semibold">Name:</span>{" "}
+                  {data.bankInfo.accountName}
+                </div>
+              </div>
+            </div>
+
+            {data.terms.length > 0 && (
+              <>
+                <div className="font-bold text-black mb-2">
+                  Terms & Conditions
+                </div>
+                <ul className="space-y-1">
+                  {data.terms.map((term, index) => (
+                    <li key={index}>
+                      {index + 1}. {term}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
             {data.notes.length > 0 && (
               <>
@@ -191,30 +222,38 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
             <table className="w-full text-sm">
               <tbody>
                 <tr>
-                  <td className="p-2 border-b border-gray-200">Subtotal (MYR):</td>
+                  <td className="p-2 border-b border-gray-200">
+                    Subtotal (MYR):
+                  </td>
                   <td className="p-2 text-right border-b border-gray-200">
                     {data.subtotal.toFixed(2)}
                   </td>
                 </tr>
                 {data.discount > 0 && (
                   <tr>
-                    <td className="p-2 border-b border-gray-200">Discount (MYR):</td>
+                    <td className="p-2 border-b border-gray-200">
+                      Discount (MYR):
+                    </td>
                     <td className="p-2 text-right border-b border-gray-200">
                       -{data.discount.toFixed(2)}
                     </td>
                   </tr>
                 )}
-                {data.tax > 0 && (
+                {data.sstRate > 0 && (
                   <tr>
-                    <td className="p-2 border-b border-gray-200">Tax (MYR):</td>
+                    <td className="p-2 border-b border-gray-200">
+                      SST ({data.sstRate}%):
+                    </td>
                     <td className="p-2 text-right border-b border-gray-200">
-                      {data.tax.toFixed(2)}
+                      {data.sstAmount.toFixed(2)}
                     </td>
                   </tr>
                 )}
                 {data.shipping > 0 && (
                   <tr>
-                    <td className="p-2 border-b border-gray-200">Shipping (MYR):</td>
+                    <td className="p-2 border-b border-gray-200">
+                      Shipping (MYR):
+                    </td>
                     <td className="p-2 text-right border-b border-gray-200">
                       {data.shipping.toFixed(2)}
                     </td>
@@ -226,12 +265,26 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
                 </tr>
               </tbody>
             </table>
+
+            {/* Payment Status */}
+            {data.paidDate && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded text-sm">
+                <div className="font-bold text-green-800">PAID</div>
+                <div>Date: {formatDate(data.paidDate)}</div>
+                {data.paidAmount && (
+                  <div>Amount: MYR {data.paidAmount.toFixed(2)}</div>
+                )}
+                {data.paymentReference && (
+                  <div>Ref: {data.paymentReference}</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer */}
         <div className="text-center mt-6 pt-4 border-t border-gray-300 text-xs text-gray-600 italic">
-          This quotation is computer-generated and does not require a signature.
+          This invoice is computer-generated and does not require a signature.
           <br />
           For inquiries, contact {data.from.email} or {data.from.phone}
         </div>
@@ -252,7 +305,7 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
             display: none !important;
           }
 
-          .quotation-preview {
+          .invoice-preview {
             max-width: none !important;
             padding: 0 !important;
             margin: 0 !important;
@@ -270,17 +323,12 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
             background-color: #f9fafb !important;
           }
 
-          .bg-\\[\\#4a90e2\\] {
-            background-color: #4a90e2 !important;
-            color: white !important;
+          .bg-blue-50 {
+            background-color: #eff6ff !important;
           }
 
-          .text-\\[\\#4a90e2\\] {
-            color: #4a90e2 !important;
-          }
-
-          .border-\\[\\#4a90e2\\] {
-            border-color: #4a90e2 !important;
+          .bg-green-50 {
+            background-color: #f0fdf4 !important;
           }
 
           /* Ensure table backgrounds print */
@@ -289,7 +337,7 @@ export default function QuotationPreview({ data, quotationId, onEdit }: Quotatio
           }
 
           table thead tr {
-            background-color: #4a90e2 !important;
+            background-color: black !important;
             color: white !important;
           }
         }

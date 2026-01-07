@@ -38,7 +38,6 @@ export const quotationDataSchema = z.object({
   total: z.number(),
   terms: z.array(z.string()),
   notes: z.array(z.string()),
-  bankInfo: bankInfoSchema,
 });
 
 export type CompanyInfoFormData = z.infer<typeof companyInfoSchema>;

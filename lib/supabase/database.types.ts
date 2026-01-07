@@ -151,6 +151,164 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          bank_account_name: string
+          bank_account_number: string
+          bank_info_id: string | null
+          bank_name: string
+          client_address: string | null
+          client_company: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          company_info_id: string | null
+          created_at: string | null
+          discount_value: number | null
+          due_date: string
+          from_company_address: string | null
+          from_company_email: string | null
+          from_company_logo_url: string | null
+          from_company_name: string | null
+          from_company_phone: string | null
+          from_company_registration: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          items: Json
+          notes: string | null
+          paid_amount: number | null
+          paid_date: string | null
+          payment_reference: string | null
+          po_number: string | null
+          project_title: string | null
+          quotation_id: string | null
+          shipping: number | null
+          sst_amount: number | null
+          sst_rate: number | null
+          status: string | null
+          subtotal: number
+          terms: string | null
+          total: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bank_account_name: string
+          bank_account_number: string
+          bank_info_id?: string | null
+          bank_name: string
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          company_info_id?: string | null
+          created_at?: string | null
+          discount_value?: number | null
+          due_date: string
+          from_company_address?: string | null
+          from_company_email?: string | null
+          from_company_logo_url?: string | null
+          from_company_name?: string | null
+          from_company_phone?: string | null
+          from_company_registration?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          items?: Json
+          notes?: string | null
+          paid_amount?: number | null
+          paid_date?: string | null
+          payment_reference?: string | null
+          po_number?: string | null
+          project_title?: string | null
+          quotation_id?: string | null
+          shipping?: number | null
+          sst_amount?: number | null
+          sst_rate?: number | null
+          status?: string | null
+          subtotal?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bank_account_name?: string
+          bank_account_number?: string
+          bank_info_id?: string | null
+          bank_name?: string
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          company_info_id?: string | null
+          created_at?: string | null
+          discount_value?: number | null
+          due_date?: string
+          from_company_address?: string | null
+          from_company_email?: string | null
+          from_company_logo_url?: string | null
+          from_company_name?: string | null
+          from_company_phone?: string | null
+          from_company_registration?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          items?: Json
+          notes?: string | null
+          paid_amount?: number | null
+          paid_date?: string | null
+          payment_reference?: string | null
+          po_number?: string | null
+          project_title?: string | null
+          quotation_id?: string | null
+          shipping?: number | null
+          sst_amount?: number | null
+          sst_rate?: number | null
+          status?: string | null
+          subtotal?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_bank_info_id_fkey"
+            columns: ["bank_info_id"]
+            isOneToOne: false
+            referencedRelation: "bank_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_company_info_id_fkey"
+            columns: ["company_info_id"]
+            isOneToOne: false
+            referencedRelation: "company_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotations: {
         Row: {
           bank_account_name: string | null
@@ -298,6 +456,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_invoice_number: { Args: never; Returns: string }
       generate_quotation_number: { Args: never; Returns: string }
     }
     Enums: {

@@ -40,9 +40,4 @@ export interface QuotationData {
   total: number;
   terms: string[];
   notes: string[];
-  bankInfo: {
-    bankName: string;
-    accountNumber: string;
-    accountName: string;
-  };
 }

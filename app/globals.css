@@ -122,9 +122,39 @@
 
 /* Print Styles */
 @media print {
+  /* Hide the sidebar elements (not the wrapper which contains content too) */
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"],
+  [data-sidebar="sidebar"] {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+  }
+
+  /* Hide site header (the one with sidebar trigger) */
+  [data-slot="sidebar-inset"] > header {
+    display: none !important;
+  }
+
   /* Hide elements with no-print class */
   .no-print {
     display: none !important;
+  }
+
+  /* Reset sidebar wrapper to not reserve sidebar space */
+  [data-slot="sidebar-wrapper"] {
+    --sidebar-width: 0px !important;
+  }
+
+  /* Make content area full width */
+  [data-slot="sidebar-inset"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   /* Force background colors to print */
