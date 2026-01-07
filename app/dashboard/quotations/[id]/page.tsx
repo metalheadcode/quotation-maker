@@ -4,33 +4,31 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import InvoicePreview from "@/components/invoice-preview";
-import { useInvoiceStore } from "@/stores/useInvoiceStore";
-import { InvoiceDataWithIds } from "@/lib/types/invoice";
+import QuotationPreview from "@/components/quotation-preview";
+import { useQuotationStore, QuotationDataWithIds } from "@/stores/useQuotationStore";
 
-export default function InvoiceDetailPage() {
+export default function QuotationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [invoiceData, setInvoiceData] =
-    React.useState<InvoiceDataWithIds | null>(null);
+  const [quotationData, setQuotationData] = React.useState<QuotationDataWithIds | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  const loadInvoiceById = useInvoiceStore((state) => state.loadInvoiceById);
+  const loadQuotationById = useQuotationStore((state) => state.loadQuotationById);
 
   React.useEffect(() => {
-    const loadInvoice = async () => {
+    const loadQuotation = async () => {
       setIsLoading(true);
-      const data = await loadInvoiceById(id);
-      setInvoiceData(data);
+      const data = await loadQuotationById(id);
+      setQuotationData(data);
       setIsLoading(false);
     };
 
     if (id) {
-      loadInvoice();
+      loadQuotation();
     }
-  }, [id, loadInvoiceById]);
+  }, [id, loadQuotationById]);
 
   if (isLoading) {
     return (
@@ -40,13 +38,13 @@ export default function InvoiceDetailPage() {
     );
   }
 
-  if (!invoiceData) {
+  if (!quotationData) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <h2 className="text-xl font-semibold">Invoice not found</h2>
-        <Button onClick={() => router.push("/dashboard/invoices")}>
+        <h2 className="text-xl font-semibold">Quotation not found</h2>
+        <Button onClick={() => router.push("/dashboard/quotations")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Invoices
+          Back to Quotations
         </Button>
       </div>
     );
@@ -54,18 +52,18 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-      <div className="flex items-center gap-4 mb-4 no-print">
+      <div className="flex items-center gap-4 mb-4">
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/dashboard/invoices")}
+          onClick={() => router.push("/dashboard/quotations")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Invoices
+          Back to Quotations
         </Button>
       </div>
 
-      <InvoicePreview data={invoiceData} />
+      <QuotationPreview data={quotationData} quotationId={id} />
     </div>
   );
 }

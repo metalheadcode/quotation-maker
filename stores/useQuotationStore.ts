@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { QuotationData } from "@/lib/types/quotation";
+import { QuotationData, Quotation, QuotationStatus } from "@/lib/types/quotation";
 
 export interface DraftQuotation {
   id: string;
@@ -24,6 +24,10 @@ interface QuotationStore {
   lastSavedAt: Date | null;
   isLoadingDrafts: boolean;
 
+  // Quotations list (all statuses)
+  quotations: Quotation[];
+  isLoadingQuotations: boolean;
+
   // Local draft methods (legacy)
   saveDraft: (data: QuotationData) => void;
   clearDraft: () => void;
@@ -39,6 +43,12 @@ interface QuotationStore {
   setCurrentDraftId: (id: string | null) => void;
   setSaveStatus: (status: SaveStatus) => void;
   clearCurrentDraft: () => void;
+
+  // Quotations list methods
+  fetchQuotations: () => Promise<void>;
+  loadQuotationById: (id: string) => Promise<QuotationDataWithIds | null>;
+  deleteQuotation: (id: string) => Promise<void>;
+  updateQuotationStatus: (id: string, status: QuotationStatus) => Promise<void>;
 }
 
 // Extended data with IDs for saving to database
@@ -121,6 +131,10 @@ export const useQuotationStore = create<QuotationStore>()(
       saveStatus: "idle" as SaveStatus,
       lastSavedAt: null,
       isLoadingDrafts: false,
+
+      // Quotations list state
+      quotations: [],
+      isLoadingQuotations: false,
 
       // Local draft methods
       saveDraft: (data) => set({ draft: data }),
@@ -266,6 +280,95 @@ export const useQuotationStore = create<QuotationStore>()(
           saveStatus: "idle",
           lastSavedAt: null,
         }),
+
+      // Quotations list methods
+      fetchQuotations: async () => {
+        set({ isLoadingQuotations: true });
+        try {
+          const response = await fetch("/api/quotations");
+          if (!response.ok) {
+            if (response.status === 401) {
+              set({ quotations: [], isLoadingQuotations: false });
+              return;
+            }
+            throw new Error("Failed to fetch quotations");
+          }
+          const apiQuotations = await response.json();
+          const quotations: Quotation[] = apiQuotations.map((q: Record<string, unknown>) => ({
+            id: q.id as string,
+            quotationNumber: (q.quotation_number as string) || "",
+            projectTitle: (q.project_title as string) || "",
+            clientName: (q.client_name as string) || "",
+            total: (q.total as number) || 0,
+            status: (q.status as QuotationStatus) || "draft",
+            date: (q.date as string) || "",
+            validUntil: (q.valid_until as string) || "",
+            createdAt: (q.created_at as string) || "",
+            updatedAt: (q.updated_at as string) || "",
+          }));
+          set({ quotations, isLoadingQuotations: false });
+        } catch (error) {
+          console.error("Error fetching quotations:", error);
+          set({ isLoadingQuotations: false });
+        }
+      },
+
+      loadQuotationById: async (id) => {
+        try {
+          const response = await fetch(`/api/quotations/${id}`);
+          if (!response.ok) {
+            throw new Error("Failed to load quotation");
+          }
+          const apiData = await response.json();
+          const formData = apiToFormData(apiData);
+          return formData;
+        } catch (error) {
+          console.error("Error loading quotation:", error);
+          return null;
+        }
+      },
+
+      deleteQuotation: async (id) => {
+        try {
+          const response = await fetch(`/api/quotations/${id}`, {
+            method: "DELETE",
+          });
+          if (!response.ok) {
+            throw new Error("Failed to delete quotation");
+          }
+
+          set((state) => ({
+            quotations: state.quotations.filter((q) => q.id !== id),
+            drafts: state.drafts.filter((d) => d.id !== id),
+            currentDraftId: state.currentDraftId === id ? null : state.currentDraftId,
+          }));
+        } catch (error) {
+          console.error("Error deleting quotation:", error);
+          throw error;
+        }
+      },
+
+      updateQuotationStatus: async (id, status) => {
+        try {
+          const response = await fetch(`/api/quotations/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status }),
+          });
+          if (!response.ok) {
+            throw new Error("Failed to update quotation status");
+          }
+
+          set((state) => ({
+            quotations: state.quotations.map((q) =>
+              q.id === id ? { ...q, status } : q
+            ),
+          }));
+        } catch (error) {
+          console.error("Error updating quotation status:", error);
+          throw error;
+        }
+      },
     }),
     {
       name: "quotation-draft-storage",

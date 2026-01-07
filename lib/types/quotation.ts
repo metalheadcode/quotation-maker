@@ -1,3 +1,18 @@
+export type QuotationStatus = "draft" | "sent" | "accepted" | "rejected" | "expired";
+
+export interface Quotation {
+  id: string;
+  quotationNumber: string;
+  projectTitle: string;
+  clientName: string;
+  total: number;
+  status: QuotationStatus;
+  date: string;
+  validUntil: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface QuotationItem {
   id: string;
   description: string;

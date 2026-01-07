@@ -333,7 +333,7 @@ export const useInvoiceStore = create<InvoiceStore>()(
       ) => {
         try {
           // Fetch the quotation data
-          const response = await fetch(`/api/quotations/draft/${quotationId}`);
+          const response = await fetch(`/api/quotations/${quotationId}`);
           if (!response.ok) {
             throw new Error("Failed to load quotation");
           }
@@ -377,9 +377,11 @@ export const useInvoiceStore = create<InvoiceStore>()(
             sstAmount: 0,
             shipping: quotationData.shipping || 0,
             total: quotationData.total || 0,
-            terms: ((quotationData.terms as string) || "")
-              .split("\n")
-              .filter(Boolean),
+            terms: [
+              "Payment is due within 30 days of invoice date.",
+              "Please include the invoice number as payment reference.",
+              "Late payments may incur additional charges.",
+            ],
             notes: ((quotationData.notes as string) || "")
               .split("\n")
               .filter(Boolean),
