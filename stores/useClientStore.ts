@@ -24,27 +24,27 @@ interface ClientStore {
   searchClients: (query: string) => Client[];
 }
 
-// Helper to map API response to Client type
+// Helper to map API response to Client type (API now returns camelCase)
 const mapApiClientToClient = (apiClient: {
   id: string;
   name: string;
-  company?: string | null;
+  registrationNumber?: string | null;
   address?: string | null;
   email?: string | null;
   phone?: string | null;
-  created_at?: string | null;
-  last_used_at?: string | null;
-  is_favorite?: boolean | null;
+  createdAt?: string | null;
+  lastUsed?: string | null;
+  isFavorite?: boolean | null;
 }): Client => ({
   id: apiClient.id,
   name: apiClient.name,
-  registrationNumber: apiClient.company || "",
+  registrationNumber: apiClient.registrationNumber || "",
   address: apiClient.address || "",
   email: apiClient.email || "",
   phone: apiClient.phone || "",
-  createdAt: apiClient.created_at || new Date().toISOString(),
-  lastUsed: apiClient.last_used_at || undefined,
-  isFavorite: apiClient.is_favorite || false,
+  createdAt: apiClient.createdAt || new Date().toISOString(),
+  lastUsed: apiClient.lastUsed || undefined,
+  isFavorite: apiClient.isFavorite || false,
 });
 
 export const useClientStore = create<ClientStore>()((set, get) => ({

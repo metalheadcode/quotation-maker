@@ -14,6 +14,7 @@ import {
   IconReport,
   IconSearch,
   IconSettings,
+  IconUsers,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -56,6 +57,11 @@ const data = {
       title: "Company",
       url: "/dashboard/company",
       icon: IconBuilding,
+    },
+    {
+      title: "Clients",
+      url: "/dashboard/clients",
+      icon: IconUsers,
     },
   ],
   navClouds: [

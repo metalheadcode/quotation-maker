@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { QuotationData, CompanyInfo } from "@/lib/types/quotation";
 import { quotationDataSchema, QuotationFormData } from "@/lib/schemas/quotation";
-import { Plus, Trash2, Save, Building2, Landmark, ExternalLink, Mail, Phone } from "lucide-react";
+import { Plus, Trash2, Save, Building2, Landmark, ExternalLink, Mail, Phone, Users, Star } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -52,8 +52,9 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
   const fetchCompanies = useCompanyStore((state) => state.fetchCompanies);
   const selectCompany = useCompanyStore((state) => state.selectCompany);
 
-  const addClient = useClientStore((state) => state.addClient);
+  const clients = useClientStore((state) => state.clients);
   const fetchClients = useClientStore((state) => state.fetchClients);
+  const getClient = useClientStore((state) => state.getClient);
 
   const getNextQuotationNumber = useQuotationStore((state) => state.getNextQuotationNumber);
   const incrementQuotationNumber = useQuotationStore((state) => state.incrementQuotationNumber);
@@ -399,30 +400,6 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
     }
   };
 
-  const handleSaveAsNewClient = async () => {
-    const toData = form.getValues("to");
-    if (!toData.name) {
-      toast.error("Please enter a company name");
-      return;
-    }
-    if (!toData.email) {
-      toast.error("Please enter an email address");
-      return;
-    }
-    try {
-      await addClient({
-        name: toData.name,
-        registrationNumber: toData.registrationNumber || "",
-        address: toData.address,
-        email: toData.email,
-        phone: toData.phone,
-      });
-      toast.success(`Client "${toData.name}" saved successfully`);
-    } catch {
-      toast.error("Failed to save client");
-    }
-  };
-
   const handleCompanySelect = (company: CompanyInfo | null, companyId?: string) => {
     if (company && companyId) {
       selectCompany(companyId);
@@ -696,102 +673,83 @@ export default function QuotationFormV2({ onSubmit, initialData }: QuotationForm
               </CardContent>
             </Card>
 
-            {/* To (Client) */}
+            {/* To (Client) - Read Only */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">To (Client)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <FormLabel>Select Existing Client</FormLabel>
-                  <div className="flex gap-2 mt-1.5">
-                    <ClientCombobox
-                      value={selectedClientId}
-                      onSelect={handleClientSelect}
-                      onAddNew={() => {
-                        // Clear and let user enter manually
-                        handleClientSelect(null);
-                      }}
-                    />
-                  </div>
-                </div>
-                <Separator />
-                <FormField
-                  control={form.control}
-                  name="to.name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="to.registrationNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registration Number</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="to.address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} rows={3} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="to.email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="to.phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {form.watch("to.name") && (
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">To (Client)</CardTitle>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleSaveAsNewClient}
-                    className="w-full"
+                    asChild
                   >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save as New Client
+                    <Link href="/dashboard/clients">
+                      Manage Clients
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </Link>
                   </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {clients.length > 0 ? (
+                  <>
+                    <div>
+                      <FormLabel>Select Client</FormLabel>
+                      <div className="mt-1.5">
+                        <ClientCombobox
+                          value={selectedClientId}
+                          onSelect={handleClientSelect}
+                        />
+                      </div>
+                    </div>
+                    {selectedClientId && getClient(selectedClientId) && (
+                      <>
+                        <Separator />
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-lg">{getClient(selectedClientId)?.name}</p>
+                            {getClient(selectedClientId)?.isFavorite && (
+                              <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                            )}
+                          </div>
+                          {getClient(selectedClientId)?.registrationNumber && (
+                            <p className="text-sm text-muted-foreground">
+                              {getClient(selectedClientId)?.registrationNumber}
+                            </p>
+                          )}
+                          {getClient(selectedClientId)?.address && (
+                            <p className="text-sm whitespace-pre-line">{getClient(selectedClientId)?.address}</p>
+                          )}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground pt-1">
+                            {getClient(selectedClientId)?.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {getClient(selectedClientId)?.email}
+                              </span>
+                            )}
+                            {getClient(selectedClientId)?.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {getClient(selectedClientId)?.phone}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground mb-3">No clients yet</p>
+                    <Button type="button" asChild>
+                      <Link href="/dashboard/clients">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Client
+                      </Link>
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>

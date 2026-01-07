@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Plus, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,10 +24,10 @@ import { CompanyInfo } from "@/lib/types/quotation";
 interface ClientComboboxProps {
   value?: string;
   onSelect: (client: CompanyInfo | null, clientId?: string) => void;
-  onAddNew: () => void;
 }
 
-export function ClientCombobox({ value, onSelect, onAddNew }: ClientComboboxProps) {
+export function ClientCombobox({ value, onSelect }: ClientComboboxProps) {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const clients = useClientStore((state) => state.clients);
   const getRecentClients = useClientStore((state) => state.getRecentClients);
@@ -88,8 +89,8 @@ export function ClientCombobox({ value, onSelect, onAddNew }: ClientComboboxProp
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    onAddNew();
                     setOpen(false);
+                    router.push("/dashboard/clients");
                   }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
@@ -178,8 +179,8 @@ export function ClientCombobox({ value, onSelect, onAddNew }: ClientComboboxProp
             <CommandGroup forceMount>
               <CommandItem
                 onSelect={() => {
-                  onAddNew();
                   setOpen(false);
+                  router.push("/dashboard/clients");
                 }}
                 className="text-primary"
                 forceMount

@@ -21,7 +21,22 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json(clients);
+    // Transform snake_case to camelCase
+    const transformed = clients?.map((client) => ({
+      id: client.id,
+      userId: client.user_id,
+      name: client.name,
+      registrationNumber: client.company,
+      address: client.address,
+      email: client.email,
+      phone: client.phone,
+      isFavorite: client.is_favorite,
+      lastUsed: client.last_used_at,
+      createdAt: client.created_at,
+      updatedAt: client.updated_at,
+    }));
+
+    return NextResponse.json(transformed);
   } catch (error) {
     console.error("Error fetching clients:", error);
     return NextResponse.json(
@@ -70,7 +85,22 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(client, { status: 201 });
+    // Transform snake_case to camelCase
+    const transformed = {
+      id: client.id,
+      userId: client.user_id,
+      name: client.name,
+      registrationNumber: client.company,
+      address: client.address,
+      email: client.email,
+      phone: client.phone,
+      isFavorite: client.is_favorite,
+      lastUsed: client.last_used_at,
+      createdAt: client.created_at,
+      updatedAt: client.updated_at,
+    };
+
+    return NextResponse.json(transformed, { status: 201 });
   } catch (error) {
     console.error("Error creating client:", error);
     return NextResponse.json(

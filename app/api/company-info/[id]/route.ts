@@ -36,7 +36,22 @@ export async function GET(
       throw error;
     }
 
-    return NextResponse.json(companyInfo);
+    // Transform snake_case to camelCase
+    const transformed = {
+      id: companyInfo.id,
+      userId: companyInfo.user_id,
+      name: companyInfo.name,
+      registrationNumber: companyInfo.registration_number,
+      address: companyInfo.address,
+      email: companyInfo.email,
+      phone: companyInfo.phone,
+      isDefault: companyInfo.is_default,
+      logoUrl: companyInfo.logo_url,
+      createdAt: companyInfo.created_at,
+      updatedAt: companyInfo.updated_at,
+    };
+
+    return NextResponse.json(transformed);
   } catch (error) {
     console.error("Error fetching company info:", error);
     return NextResponse.json(
@@ -92,7 +107,22 @@ export async function PUT(
       throw error;
     }
 
-    return NextResponse.json(updatedCompanyInfo);
+    // Transform snake_case to camelCase
+    const transformed = {
+      id: updatedCompanyInfo.id,
+      userId: updatedCompanyInfo.user_id,
+      name: updatedCompanyInfo.name,
+      registrationNumber: updatedCompanyInfo.registration_number,
+      address: updatedCompanyInfo.address,
+      email: updatedCompanyInfo.email,
+      phone: updatedCompanyInfo.phone,
+      isDefault: updatedCompanyInfo.is_default,
+      logoUrl: updatedCompanyInfo.logo_url,
+      createdAt: updatedCompanyInfo.created_at,
+      updatedAt: updatedCompanyInfo.updated_at,
+    };
+
+    return NextResponse.json(transformed);
   } catch (error) {
     console.error("Error updating company info:", error);
     return NextResponse.json(

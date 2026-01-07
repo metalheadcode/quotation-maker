@@ -35,7 +35,22 @@ export async function GET(
       throw error;
     }
 
-    return NextResponse.json(client);
+    // Transform snake_case to camelCase
+    const transformed = {
+      id: client.id,
+      userId: client.user_id,
+      name: client.name,
+      registrationNumber: client.company,
+      address: client.address,
+      email: client.email,
+      phone: client.phone,
+      isFavorite: client.is_favorite,
+      lastUsed: client.last_used_at,
+      createdAt: client.created_at,
+      updatedAt: client.updated_at,
+    };
+
+    return NextResponse.json(transformed);
   } catch (error) {
     console.error("Error fetching client:", error);
     return NextResponse.json(
@@ -91,7 +106,22 @@ export async function PUT(
       throw error;
     }
 
-    return NextResponse.json(updatedClient);
+    // Transform snake_case to camelCase
+    const transformed = {
+      id: updatedClient.id,
+      userId: updatedClient.user_id,
+      name: updatedClient.name,
+      registrationNumber: updatedClient.company,
+      address: updatedClient.address,
+      email: updatedClient.email,
+      phone: updatedClient.phone,
+      isFavorite: updatedClient.is_favorite,
+      lastUsed: updatedClient.last_used_at,
+      createdAt: updatedClient.created_at,
+      updatedAt: updatedClient.updated_at,
+    };
+
+    return NextResponse.json(transformed);
   } catch (error) {
     console.error("Error updating client:", error);
     return NextResponse.json(

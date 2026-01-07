@@ -21,7 +21,22 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json(companyInfos);
+    // Transform snake_case to camelCase
+    const transformed = companyInfos?.map((info) => ({
+      id: info.id,
+      userId: info.user_id,
+      name: info.name,
+      registrationNumber: info.registration_number,
+      address: info.address,
+      email: info.email,
+      phone: info.phone,
+      isDefault: info.is_default,
+      logoUrl: info.logo_url,
+      createdAt: info.created_at,
+      updatedAt: info.updated_at,
+    }));
+
+    return NextResponse.json(transformed);
   } catch (error) {
     console.error("Error fetching company infos:", error);
     return NextResponse.json(
@@ -71,7 +86,22 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(companyInfo, { status: 201 });
+    // Transform snake_case to camelCase
+    const transformed = {
+      id: companyInfo.id,
+      userId: companyInfo.user_id,
+      name: companyInfo.name,
+      registrationNumber: companyInfo.registration_number,
+      address: companyInfo.address,
+      email: companyInfo.email,
+      phone: companyInfo.phone,
+      isDefault: companyInfo.is_default,
+      logoUrl: companyInfo.logo_url,
+      createdAt: companyInfo.created_at,
+      updatedAt: companyInfo.updated_at,
+    };
+
+    return NextResponse.json(transformed, { status: 201 });
   } catch (error) {
     console.error("Error creating company info:", error);
     return NextResponse.json(
