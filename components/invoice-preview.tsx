@@ -133,7 +133,7 @@ export default function InvoicePreview({ data, onEdit }: InvoicePreviewProps) {
         {/* Services Table */}
         <table className="w-full mb-6 text-sm border-collapse">
           <thead>
-            <tr className="bg-black text-white">
+            <tr style={{ backgroundColor: '#000000', color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}>
               <th className="p-2 text-left w-[5%]">#</th>
               <th className="p-2 text-left w-[55%]">Item/Description</th>
               <th className="p-2 text-left w-[12%]">Price/Unit</th>
@@ -168,8 +168,8 @@ export default function InvoicePreview({ data, onEdit }: InvoicePreviewProps) {
         </table>
 
         {/* Summary Section */}
-        <div className="grid grid-cols-[55%_45%] gap-6 mt-6">
-          <div className="text-sm">
+        <div className="grid grid-cols-[60%_40%] gap-0 mt-6">
+          <div className="text-sm pr-6">
             {/* Bank Information - Prominent for Invoice */}
             <div className="bg-blue-50 p-4 rounded border border-blue-200 mb-4">
               <div className="font-bold text-black mb-2 text-base">
@@ -219,49 +219,53 @@ export default function InvoicePreview({ data, onEdit }: InvoicePreviewProps) {
           </div>
 
           <div>
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '55%' }} />
+                <col style={{ width: '45%' }} />
+              </colgroup>
               <tbody>
                 <tr>
-                  <td className="p-2 border-b border-gray-200">
+                  <td className="py-2 border-b border-gray-200">
                     Subtotal (MYR):
                   </td>
-                  <td className="p-2 text-right border-b border-gray-200">
+                  <td className="py-2 text-right border-b border-gray-200">
                     {data.subtotal.toFixed(2)}
                   </td>
                 </tr>
                 {data.discount > 0 && (
                   <tr>
-                    <td className="p-2 border-b border-gray-200">
+                    <td className="py-2 border-b border-gray-200">
                       Discount (MYR):
                     </td>
-                    <td className="p-2 text-right border-b border-gray-200">
+                    <td className="py-2 text-right border-b border-gray-200">
                       -{data.discount.toFixed(2)}
                     </td>
                   </tr>
                 )}
                 {data.sstRate > 0 && (
                   <tr>
-                    <td className="p-2 border-b border-gray-200">
+                    <td className="py-2 border-b border-gray-200">
                       SST ({data.sstRate}%):
                     </td>
-                    <td className="p-2 text-right border-b border-gray-200">
+                    <td className="py-2 text-right border-b border-gray-200">
                       {data.sstAmount.toFixed(2)}
                     </td>
                   </tr>
                 )}
                 {data.shipping > 0 && (
                   <tr>
-                    <td className="p-2 border-b border-gray-200">
+                    <td className="py-2 border-b border-gray-200">
                       Shipping (MYR):
                     </td>
-                    <td className="p-2 text-right border-b border-gray-200">
+                    <td className="py-2 text-right border-b border-gray-200">
                       {data.shipping.toFixed(2)}
                     </td>
                   </tr>
                 )}
-                <tr className="bg-black text-white font-bold">
-                  <td className="p-2">Total Amount (MYR):</td>
-                  <td className="p-2 text-right">{data.total.toFixed(2)}</td>
+                <tr className="font-bold">
+                  <td className="py-2" style={{ backgroundColor: '#000000', color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}>Total Amount (MYR):</td>
+                  <td className="py-2 text-right" style={{ backgroundColor: '#000000', color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' } as React.CSSProperties}>{data.total.toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>

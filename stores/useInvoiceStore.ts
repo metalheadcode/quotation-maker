@@ -10,6 +10,16 @@ import { QuotationData } from "@/lib/types/quotation";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+// Generate random alphanumeric string
+const generateRandomAlphanumeric = (length: number): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
 interface InvoiceStore {
   // State
   invoices: Invoice[];
@@ -17,12 +27,10 @@ interface InvoiceStore {
   saveStatus: SaveStatus;
   lastSavedAt: Date | null;
   isLoadingInvoices: boolean;
-  lastInvoiceNumber: number;
 
   // Methods
   fetchInvoices: () => Promise<void>;
-  getNextInvoiceNumber: () => string;
-  incrementInvoiceNumber: () => void;
+  generateInvoiceNumber: () => string;
   saveInvoice: (data: InvoiceDataWithIds) => Promise<string | null>;
   loadInvoiceById: (id: string) => Promise<InvoiceDataWithIds | null>;
   deleteInvoice: (id: string) => Promise<void>;
@@ -136,18 +144,9 @@ export const useInvoiceStore = create<InvoiceStore>()(
       saveStatus: "idle" as SaveStatus,
       lastSavedAt: null,
       isLoadingInvoices: false,
-      lastInvoiceNumber: 0,
 
-      getNextInvoiceNumber: () => {
-        const { lastInvoiceNumber } = get();
-        const nextNumber = lastInvoiceNumber + 1;
-        return `#INV${String(nextNumber).padStart(6, "0")}`;
-      },
-
-      incrementInvoiceNumber: () => {
-        set((state) => ({
-          lastInvoiceNumber: state.lastInvoiceNumber + 1,
-        }));
+      generateInvoiceNumber: () => {
+        return `#INV-${generateRandomAlphanumeric(6)}`;
       },
 
       fetchInvoices: async () => {
@@ -339,9 +338,9 @@ export const useInvoiceStore = create<InvoiceStore>()(
           }
           const quotationData = await response.json();
 
-          // Get next invoice number
-          const { getNextInvoiceNumber, incrementInvoiceNumber } = get();
-          const invoiceNumber = getNextInvoiceNumber();
+          // Generate random invoice number
+          const { generateInvoiceNumber } = get();
+          const invoiceNumber = generateInvoiceNumber();
 
           // Create invoice data from quotation
           const today = new Date();
@@ -380,7 +379,6 @@ export const useInvoiceStore = create<InvoiceStore>()(
             terms: [
               "Payment is due within 30 days of invoice date.",
               "Please include the invoice number as payment reference.",
-              "Late payments may incur additional charges.",
             ],
             notes: ((quotationData.notes as string) || "")
               .split("\n")
@@ -393,7 +391,6 @@ export const useInvoiceStore = create<InvoiceStore>()(
             bankInfoId,
           };
 
-          incrementInvoiceNumber();
           return invoiceData;
         } catch (error) {
           console.error("Error creating invoice from quotation:", error);
@@ -404,10 +401,9 @@ export const useInvoiceStore = create<InvoiceStore>()(
     {
       name: "invoice-storage",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        lastInvoiceNumber: state.lastInvoiceNumber,
-        // Don't persist invoices array - it comes from Supabase
-      }),
+      // Don't persist invoices array - it comes from Supabase
+      // No sequential counter to persist with random generation
+      partialize: () => ({}),
     }
   )
 );

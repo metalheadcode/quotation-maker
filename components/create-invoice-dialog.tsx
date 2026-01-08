@@ -49,9 +49,6 @@ export function CreateInvoiceDialog({
     (state) => state.createInvoiceFromQuotation
   );
   const saveInvoice = useInvoiceStore((state) => state.saveInvoice);
-  const incrementInvoiceNumber = useInvoiceStore(
-    (state) => state.incrementInvoiceNumber
-  );
 
   React.useEffect(() => {
     fetchBankAccounts();
@@ -98,7 +95,6 @@ export function CreateInvoiceDialog({
         const invoiceId = await saveInvoice(invoiceData);
 
         if (invoiceId) {
-          incrementInvoiceNumber();
           onOpenChange(false);
           router.push(`/dashboard/invoices/${invoiceId}`);
         }
